@@ -12,3 +12,8 @@ def create_df_subject(list_students, list_groups):
                             "Посещаемость": np.random.randint(0, 101, len(list_students))})
     df_subject = df_subject.set_index("Студент")
     return df_subject
+
+def filter_df_column(df_subject, id_column, x, low = True):
+    if low:
+        return df_subject[df_subject[id_column] < x]
+    return df_subject[df_subject[id_column] > x]
