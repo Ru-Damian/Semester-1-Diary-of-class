@@ -23,11 +23,14 @@ def create_df_subject(list_students, list_groups):
     df_subject["Средняя оценка"] = count_mean_mark(df_subject, output = "col")
     return df_subject
 
-# Функция для фильтрации таблицы по столбцу
-def filter_df_column(df_subject, id_column, x, low = True):
-    if low:
-        return df_subject[df_subject[id_column] < x]
-    return df_subject[df_subject[id_column] > x]
+# Функция для фильтрации таблицы по столбцу двумя способами(compare, value)
+def filter_df_column(df_subject, id_column, x, type = "compare", low = True):
+    if type == "compare":
+        if low:
+            return df_subject[df_subject[id_column] < x], len(df_subject[df_subject[id_column] < x])
+        return df_subject[df_subject[id_column] > x], len(df_subject[df_subject[id_column] > x])
+    elif type == "value":
+        return df_subject[df_subject[id_column].isin(x)], len(df_subject[df_subject[id_column].isin(x)])
 
 # Функция для добавления столбца одного из двух типов(mark, bool)
 def add_column(df_subject, title, type = "mark"):
@@ -51,3 +54,8 @@ def add_student(subjects, name, group):
 def remove_student(subjects, id):
     for subject, df_subject in subjects.items():
         subjects[subject] = df_subject.drop(id, axis=0)
+
+# Функция для изменения значения ячейки в таблице
+def replace_value(df_subject, id_column, id_student, value):
+    df_subject.loc[id_student, id_column] = value
+    count_mean_mark(df_subject)
