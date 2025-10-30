@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 
 # Функция для подсчета среденей оценки
-def count_mean_mark(df_subject, output = "df"):
-    id_mean = df_subject.columns.get_loc("Средняя оценка")
-    df_subject["Средняя оценка"] = list(map(int, df_subject.iloc[:, 2:id_mean].mean(axis=1)))
+def count_mean_mark(df_subject, id_column = "Средняя оценка", output = "df"):
+    id_mean = df_subject.columns.get_loc(id_column)
+    df_subject[id_column] = list(map(int, df_subject.iloc[:, 2:id_mean].mean(axis=1)))
     if output == "df":
         return df_subject
-    return df_subject["Средняя оценка"]
+    return df_subject[id_column]
 
 # Функция для создания таблицы предмета с синтетическими данными
 def create_df_subject(list_students, list_groups):
@@ -65,7 +65,7 @@ def replace_value(df_subject, id_column, id_student, value):
     count_mean_mark(df_subject)
 
 # Функция для вывода всей информации о студенте по одному предмету или всем
-def find_student(subjects, id, id_subject = "all"):
+def info_student(subjects, id, id_subject = "all"):
     data_marks = list()
     for subject, df_subject in subjects.items():
         row = df_subject.loc[id]
@@ -87,3 +87,17 @@ def find_student(subjects, id, id_subject = "all"):
         print("Оценки по предметам\n", df_marks, "\n")
     else:
         print("Оценки по предмету\n", pd.DataFrame(df_marks.loc[id_subject]).T, "\n")
+
+# Функция для вывода средних оценок по всем предметам
+def info_subjects(subjects):
+    data_subjects = dict()
+    for subject, df_subject in subjects.items():
+        if data_subjects == dict():
+            data_subjects["ID"] = df_subject.index
+            data_subjects["Студент"] = df_subject["Студент"]
+            data_subjects["Группа"] = df_subject["Группа"]
+        data_subjects[subject] = df_subject["Средняя оценка"]
+    df_subjects = pd.DataFrame(data_subjects).set_index("ID")
+    df_subjects = add_column(df_subjects, "Средний балл", type_f = "bool")
+    df_subjects = count_mean_mark(df_subjects, id_column="Средний балл")
+    print("Все предметы\n", df_subjects, "\n")
