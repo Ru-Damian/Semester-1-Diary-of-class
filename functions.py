@@ -2,12 +2,13 @@ import pandas as pd
 import numpy as np
 
 # Функция для подсчета среденей оценки
-def count_mean_mark(df_subject, id_column = "Средняя оценка", output = "df"):
-    id_mean = df_subject.columns.get_loc(id_column)
-    df_subject[id_column] = list(map(int, df_subject.iloc[:, 2:id_mean].mean(axis=1)))
+def count_mean_mark(df_subject, name_column = "Средняя оценка", output = "df"):
+    id_mean = df_subject.columns.get_loc(name_column)
+    id_mark1 = ("Студент" in df_subject.columns) + ("Группа" in df_subject.columns)
+    df_subject[name_column] = list(map(int, df_subject.iloc[:, id_mark1:id_mean].mean(axis=1)))
     if output == "df":
         return df_subject
-    return df_subject[id_column]
+    return df_subject[name_column]
 
 # Функция для создания таблицы предмета с синтетическими данными
 def create_df_subject(list_students, list_groups):
@@ -26,23 +27,27 @@ def create_df_subject(list_students, list_groups):
     return df_subject
 
 # Функция для фильтрации таблицы по столбцу двумя способами(compare, value)
-def filter_df_column(df_subject, id_column, x, type_f = "compare", low = True):
+# compare -- оставить строки, где в столбце name_column значения больше(low = False) или меньше(low = True) значения x(int)
+# value   -- оставить строки, где в столбце name_column значения совпадают со значениями из списка x(int, list)
+def filter_df_column(df_subject, name_column, x, type_f = "compare", low = True):
     if type_f == "compare":
         if low:
-            return df_subject[df_subject[id_column] < x], len(df_subject[df_subject[id_column] < x])
-        return df_subject[df_subject[id_column] > x], len(df_subject[df_subject[id_column] > x])
+            return df_subject[df_subject[name_column] < x], len(df_subject[df_subject[name_column] < x])
+        return df_subject[df_subject[name_column] > x], len(df_subject[df_subject[name_column] > x])
     elif type_f == "value":
         if type(x) != list():
             x = [x]
-        return df_subject[df_subject[id_column].isin(x)], len(df_subject[df_subject[id_column].isin(x)])
+        return df_subject[df_subject[name_column].isin(x)], len(df_subject[df_subject[name_column].isin(x)])
 
-# Функция для добавления столбца одного из двух типов(mark, bool)
-def add_column(df_subject, title, type_f = "mark"):
+# Функция для добавления столбца одного из двух типов(before, end)
+# before -- создать столбец перед столбцом name_column
+# end    -- создать столбец в конце таблицы
+def add_column(df_subject, title, place = "before", name_column = "Средняя оценка"):
     data = np.nan
-    if type_f == "mark":
-        id_mean = df_subject.columns.get_loc("Средняя оценка")
-        df_subject.insert(loc=id_mean, column=title, value=data)
-    elif type_f == "bool":
+    if place == "before":
+        id_column = df_subject.columns.get_loc(name_column)
+        df_subject.insert(loc=id_column, column=title, value=data)
+    elif place == "end":
         df_subject[title] = data
     return df_subject
 
@@ -60,12 +65,12 @@ def remove_student(subjects, id):
         subjects[subject] = df_subject.drop(id, axis=0)
 
 # Функция для изменения значения ячейки в таблице
-def replace_value(df_subject, id_column, id_student, value):
-    df_subject.loc[id_student, id_column] = value
+def replace_value(df_subject, name_column, id, value):
+    df_subject.loc[id, name_column] = value
     count_mean_mark(df_subject)
 
 # Функция для вывода всей информации о студенте по одному предмету или всем
-def info_student(subjects, id, id_subject = "all"):
+def info_student(subjects, id, name_subject = "all"):
     data_marks = list()
     for subject, df_subject in subjects.items():
         row = df_subject.loc[id]
@@ -83,21 +88,50 @@ def info_student(subjects, id, id_subject = "all"):
         }, index=[id])
     df_marks.drop(["Студент", "Группа"], inplace=True, axis=1)
     print("Данные студента\n", df_student.to_string(index=False), "\n")
-    if id_subject == "all":
+    if name_subject == "all":
         print("Оценки по предметам\n", df_marks, "\n")
     else:
-        print("Оценки по предмету\n", pd.DataFrame(df_marks.loc[id_subject]).T, "\n")
+        print("Оценки по предмету\n", pd.DataFrame(df_marks.loc[name_subject]).T, "\n")
 
 # Функция для вывода средних оценок по всем предметам
 def info_subjects(subjects):
     data_subjects = dict()
+    data_attendance = list()
+    cnt = 0
     for subject, df_subject in subjects.items():
+        cnt += 1
         if data_subjects == dict():
             data_subjects["ID"] = df_subject.index
             data_subjects["Студент"] = df_subject["Студент"]
             data_subjects["Группа"] = df_subject["Группа"]
         data_subjects[subject] = df_subject["Средняя оценка"]
+        data_attendance.append(df_subject["Посещаемость"])
+    data_attendance = list(map(int, sum(data_attendance) / cnt))
+    data_subjects["Посещаемость"] = data_attendance
     df_subjects = pd.DataFrame(data_subjects).set_index("ID")
-    df_subjects = add_column(df_subjects, "Средний балл", type_f = "bool")
-    df_subjects = count_mean_mark(df_subjects, id_column="Средний балл")
+    df_subjects = add_column(df_subjects, "Средний балл", place = "before", name_column = "Посещаемость")
+    df_subjects = count_mean_mark(df_subjects, name_column="Средний балл")
     print("Все предметы\n", df_subjects, "\n")
+
+# Функция для вывода средних оценок по всем предметам по группам
+def info_groups(subjects, list_groups):
+    data_groups = dict()
+    data_groups["Группа"] = sorted(set(list_groups))
+    data_attendance = list()
+    cnt = 0
+    for subject, df_subject in subjects.items():
+        cnt += 1
+        data_subject = list()
+        data_subject_attendance = list()
+        for group in data_groups["Группа"]:
+            df_group = filter_df_column(df_subject, "Группа", group, type_f = "value")[0]
+            data_subject.append(int(df_group["Средняя оценка"].mean()))
+            data_subject_attendance.append(int(df_group["Посещаемость"].mean()))
+        data_groups[subject] = data_subject
+        data_attendance.append(pd.Series(data_subject_attendance))
+    data_attendance = list(map(int, sum(data_attendance) / cnt))
+    data_groups["Посещаемость"] = data_attendance
+    df_groups = pd.DataFrame(data_groups).set_index("Группа")
+    df_groups = add_column(df_groups, "Средний балл", place = "before", name_column = "Посещаемость") # place = "before", name_column = "Посещаемость"
+    df_groups = count_mean_mark(df_groups, name_column="Средний балл")
+    print("Средние баллы по группам\n", df_groups, "\n")
