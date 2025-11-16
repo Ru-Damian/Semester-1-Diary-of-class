@@ -11,9 +11,9 @@ def count_mean_mark(df_subject, name_column = "Средняя оценка", out
     return df_subject[name_column]
 
 # Функция для создания таблицы предмета с синтетическими данными
-def create_df_subject(list_students, list_groups):
+def create_df_subject(list_id, list_students, list_groups):
     df_subject = pd.DataFrame({
-        "ID": [p + 1 for p in range(1000, 1000 + len(list_students))],
+        "ID": list_id,
         "Студент": list_students,
         "Группа": list_groups,
         "Оценка дз": np.random.randint(0, 101, len(list_students)),
