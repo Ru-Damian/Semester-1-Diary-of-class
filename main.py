@@ -3,6 +3,12 @@ import numpy as np
 import streamlit as st
 import functions as func
 import time
+
+def log(action, info):
+    print(f"{action}: {info}\n")
+    with open("logs.log", "a", encoding="utf-8") as file:
+        file.write(f"{time.strftime('[%Y-%m-%d %H:%M:%S]')} {action}: {info}\n")
+
 def load_subjects():
     with open("subjects.txt", "r", encoding="utf-8") as file:
         list_subjects = [s.strip() for s in file]
@@ -24,6 +30,7 @@ def load_subjects():
                         list_students.append(fio)
                         list_groups.append(group)
                 subjects[subject] = func.create_df_subject(list_id, list_students, list_groups)
+                log("Создать таблицу предмета", f"Предмет = {subject}") # log
     list_groups = subjects[list_subjects[0]]["Группа"].to_list()
     return subjects, list_subjects, list_groups
 
@@ -50,6 +57,7 @@ if name_table in list_subjects:
         st.dataframe(subjects[name_table])
         if st.button("Редактировать"):
             st.session_state.editing = True
+            log("Редактировать", f"Предмет = {name_table}") # log
             st.rerun()
     else:
         edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
@@ -57,6 +65,7 @@ if name_table in list_subjects:
             subjects[name_table] = edited_df
             save_subjects(subjects)
             st.session_state.editing = False
+            log("Сохранить", f"Предмет = {name_table}") # log
             st.success("Изменения сохранены!", icon="✅")
             time.sleep(1)
             st.rerun()
@@ -86,6 +95,7 @@ if action == "Добавить студента":
     if st.sidebar.button("Добавить студента"):
         func.add_student(subjects, name, group)
         save_subjects(subjects)
+        log(action, f"ФИО = {name}, Группа = {group}") # log
         st.success(f"Студент {name} ({group}) успешно добавлен!", icon="✅")
         time.sleep(1)
         st.rerun()
@@ -96,6 +106,7 @@ if action == "Удалить студента":
     if st.sidebar.button("Удалить студента"):
         func.remove_student(subjects, id_student)
         save_subjects(subjects)
+        log(action, f"ID студента = {id_student}")
         st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
         time.sleep(1)
         st.rerun()
@@ -112,6 +123,7 @@ if action == "Добавить столбец":
             for df_subject in subjects.values():
                 func.add_column(df_subject, title, place="end")
         save_subjects(subjects)
+        log(action, f"Название = {title}, Тип столбца = {type_column}") # log
         st.success(f"Столбец {title} успешно создан!", icon="✅")
         time.sleep(1)
         st.rerun()
