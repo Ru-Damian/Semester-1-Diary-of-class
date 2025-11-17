@@ -67,7 +67,7 @@ def remove_student(subjects, id_student):
 # Функция для изменения значения ячейки в таблице
 def replace_value(df_subject, name_column, id, value):
     df_subject.loc[id, name_column] = value
-    count_mean_mark(df_subject)
+    df_subject = count_mean_mark(df_subject)
 
 # Функция для вывода всей информации о студенте по одному предмету или всем
 def info_student(subjects, id_student, name_subject = "all"):

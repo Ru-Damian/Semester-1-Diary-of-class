@@ -4,8 +4,7 @@ import streamlit as st
 import functions as func
 import time
 
-def log(action, info):
-    print(f"{action}: {info}\n")
+def write_log(action, info):
     with open("logs.log", "a", encoding="utf-8") as file:
         file.write(f"{time.strftime('[%Y-%m-%d %H:%M:%S]')} {action}: {info}\n")
 
@@ -30,7 +29,7 @@ def load_subjects():
                         list_students.append(fio)
                         list_groups.append(group)
                 subjects[subject] = func.create_df_subject(list_id, list_students, list_groups)
-                log("Создать таблицу предмета", f"Предмет = {subject}") # log
+            write_log("Создать таблицу предмета", f"Предмет = {subject}") # log
     list_groups = subjects[list_subjects[0]]["Группа"].to_list()
     return subjects, list_subjects, list_groups
 
@@ -57,24 +56,29 @@ if name_table in list_subjects:
         st.dataframe(subjects[name_table])
         if st.button("Редактировать"):
             st.session_state.editing = True
-            log("Редактировать", f"Предмет = {name_table}") # log
+            write_log("Редактировать", f"Предмет = {name_table}") # log
             st.rerun()
     else:
         edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
+        edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
+        for col in edited_df.columns[2:]:
+            edited_df[col] = edited_df[col].clip(lower=0, upper=100)
+        edited_df = func.count_mean_mark(edited_df)
         if st.button("Сохранить изменения"):
             subjects[name_table] = edited_df
             save_subjects(subjects)
             st.session_state.editing = False
-            log("Сохранить", f"Предмет = {name_table}") # log
+            write_log("Сохранить", f"Предмет = {name_table}") # log
             st.success("Изменения сохранены!", icon="✅")
             time.sleep(1)
             st.rerun()
+    st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.xlsx")
 else:
     if name_table == "Все предметы":
         st.write(name_table)
         st.dataframe(func.info_subjects(subjects))
     elif name_table == "Данные студента":
-        id_student = int(st.sidebar.text_input("ID студента", value=1001))
+        id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
         if st.sidebar.button("Получить данные"):
             df_student, df_marks = func.info_student(subjects, id_student)
             st.write(name_table)
@@ -91,22 +95,22 @@ action = st.sidebar.selectbox("", (["Не выбрано"] + actions))
 if action == "Добавить студента":
     st.sidebar.subheader("Добавить студента")
     name = st.sidebar.text_input("Имя студента")
-    group = int(st.sidebar.text_input("Группа", value = 1))
+    group = st.sidebar.number_input("Группа", value = 1, min_value = 1, max_value = 15)
     if st.sidebar.button("Добавить студента"):
         func.add_student(subjects, name, group)
         save_subjects(subjects)
-        log(action, f"ФИО = {name}, Группа = {group}") # log
+        write_log(action, f"ФИО = {name}, Группа = {group}") # log
         st.success(f"Студент {name} ({group}) успешно добавлен!", icon="✅")
         time.sleep(1)
         st.rerun()
 
 if action == "Удалить студента":
     st.sidebar.subheader("Удалить студента")
-    id_student = int(st.sidebar.text_input("ID студента", value = 1))
+    id_student = st.sidebar.number_input("ID студента", value = 1002, min_value=1001)
     if st.sidebar.button("Удалить студента"):
         func.remove_student(subjects, id_student)
         save_subjects(subjects)
-        log(action, f"ID студента = {id_student}")
+        write_log(action, f"ID студента = {id_student}")
         st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
         time.sleep(1)
         st.rerun()
@@ -123,9 +127,34 @@ if action == "Добавить столбец":
             for df_subject in subjects.values():
                 func.add_column(df_subject, title, place="end")
         save_subjects(subjects)
-        log(action, f"Название = {title}, Тип столбца = {type_column}") # log
+        write_log(action, f"Название = {title}, Тип столбца = {type_column}") # log
         st.success(f"Столбец {title} успешно создан!", icon="✅")
         time.sleep(1)
         st.rerun()
+
+st.sidebar.title("Другое")
+other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"]))
+
+# Создает предмет, новую таблицу можно посмотреть, ломает таблицы "Все предметы", "Данные студенты", "Данные по группам" до перезапуска streamlit
+# if other == "Добавить предмет":
+#     name_subject = st.sidebar.text_input("Название предмета")
+#     if st.sidebar.button("Добавить предмет"):
+#         with open("subjects.txt", "a", encoding="utf-8") as file:
+#             file.write(f"{name_subject}\n")
+#         subjects, list_subjects, list_groups = load_subjects()
+#         save_subjects(subjects)
+#         st.session_state.subjects = subjects
+#         write_log("Добавить новый предмет", f"Предмет = {name_subject}") # log
+#         st.success(f"Таблица для предмета {name_subject} успешно создан!", icon="✅")
+#         time.sleep(1)
+#         st.rerun()
+
+if other == "Посмотреть логи":
+    with open("logs.log", "r", encoding="utf-8") as file:
+        logs = file.readlines()
+    if st.sidebar.button("Посмотреть логи"):
+        st.header("История логов")
+        for log in logs:
+            st.write(log)
 
 save_subjects(subjects)
