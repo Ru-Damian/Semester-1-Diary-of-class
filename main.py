@@ -38,7 +38,7 @@ def save_subjects(subjects):
         df_subject.to_csv(f"{subject}.csv")
 
 subjects, list_subjects, list_groups = load_subjects()
-actions = ["Добавить студента", "Удалить студента", "Добавить столбец"]
+actions = ["Отфильтровать", "Добавить студента", "Удалить студента", "Добавить столбец"]
 
 if "subjects" not in st.session_state:
     st.session_state.subjects = subjects
@@ -49,30 +49,40 @@ st.sidebar.title("Таблицы")
 name_table = st.sidebar.selectbox("", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
 
 if name_table in list_subjects:
-    st.write(name_table)
-    if "editing" not in st.session_state:
-        st.session_state.editing = False
-    if not st.session_state.editing:
-        st.dataframe(subjects[name_table])
-        if st.button("Редактировать"):
-            st.session_state.editing = True
-            write_log("Редактировать", f"Предмет = {name_table}") # log
-            st.rerun()
-    else:
-        edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
-        edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
-        for col in edited_df.columns[2:]:
-            edited_df[col] = edited_df[col].clip(lower=0, upper=100)
-        edited_df = func.count_mean_mark(edited_df)
-        if st.button("Сохранить изменения"):
-            subjects[name_table] = edited_df
-            save_subjects(subjects)
+    if "filtering" not in st.session_state:
+        st.session_state.filtering = False
+    if not st.session_state.filtering:
+        st.write(name_table)
+        if "editing" not in st.session_state:
             st.session_state.editing = False
-            write_log("Сохранить", f"Предмет = {name_table}") # log
-            st.success("Изменения сохранены!", icon="✅")
-            time.sleep(1)
+        if not st.session_state.editing:
+            st.dataframe(subjects[name_table])
+            if st.button("Редактировать"):
+                st.session_state.editing = True
+                write_log("Редактировать", f"Предмет = {name_table}") # log
+                st.rerun()
+        else:
+            edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
+            edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
+            for col in edited_df.columns[2:]:
+                edited_df[col] = edited_df[col].clip(lower=0, upper=100)
+            edited_df = func.count_mean_mark(edited_df)
+            if st.button("Сохранить изменения"):
+                subjects[name_table] = edited_df
+                save_subjects(subjects)
+                st.session_state.editing = False
+                write_log("Сохранить", f"Предмет = {name_table}") # log
+                st.success("Изменения сохранены!", icon="✅")
+                time.sleep(1)
+                st.rerun()
+        st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.xlsx")
+    else:
+        st.write(name_table)
+        filtered_df = st.session_state.filtered_df
+        st.dataframe(filtered_df)
+        if st.button("Сбросить"):
+            st.session_state.filtering = False
             st.rerun()
-    st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.xlsx")
 else:
     if name_table == "Все предметы":
         st.write(name_table)
@@ -132,10 +142,26 @@ if action == "Добавить столбец":
         time.sleep(1)
         st.rerun()
 
-st.sidebar.title("Другое")
-other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"]))
+if action == "Отфильтровать":
+    try:
+        error = subjects[name_table]
+        st.sidebar.subheader("Параметры фильтра")
+        column_filter = st.sidebar.selectbox("Столбец для фильтрации", (subjects[name_table].columns[2:]))
+        x_filter = st.sidebar.slider(f"{column_filter} > значения", value=50, min_value=10, max_value=90)
+        low_filter = st.sidebar.checkbox(f"{column_filter} < значения")
+        if st.sidebar.button("Показать результат"):
+            st.write(name_table)
+            filtered_df, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
+            st.session_state.filtering = True
+            st.session_state.filtered_df = filtered_df
+            st.rerun()
+    except KeyError:
+        st.sidebar.warning("Находится в разработке", icon="⚠️")
 
-# Создает предмет, новую таблицу можно посмотреть, ломает таблицы "Все предметы", "Данные студенты", "Данные по группам" до перезапуска streamlit
+st.sidebar.title("Другое")
+other = st.sidebar.selectbox("", (["Не выбрано", "Посмотреть логи"])) #, "Добавить предмет"
+
+# Создает предмет, новую таблицу можно посмотреть, ломает таблицы "Все предметы", "Данные студента", "Данные по группам" до перезапуска streamlit
 # if other == "Добавить предмет":
 #     name_subject = st.sidebar.text_input("Название предмета")
 #     if st.sidebar.button("Добавить предмет"):
