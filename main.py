@@ -88,13 +88,18 @@ else:
         st.write(name_table)
         st.dataframe(func.info_subjects(subjects))
     elif name_table == "Данные студента":
+        st.write("Все предметы")
+        st.dataframe(func.info_subjects(subjects))
         id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
         if st.sidebar.button("Получить данные"):
-            df_student, df_marks = func.info_student(subjects, id_student)
-            st.write(name_table)
-            st.dataframe(df_student)
-            st.write("Оценки по предметам")
-            st.dataframe(df_marks)
+            try:
+                df_student, df_marks = func.info_student(subjects, id_student)
+                st.write(name_table)
+                st.dataframe(df_student)
+                st.write("Оценки по предметам")
+                st.dataframe(df_marks)
+            except KeyError:
+                st.warning("Студента с таким ID не существует", icon = "❌")
     else:
         st.write(name_table)
         st.dataframe(func.info_groups(subjects, list_groups))
@@ -118,12 +123,15 @@ if action == "Удалить студента":
     st.sidebar.subheader("Удалить студента")
     id_student = st.sidebar.number_input("ID студента", value = 1002, min_value=1001)
     if st.sidebar.button("Удалить студента"):
-        func.remove_student(subjects, id_student)
-        save_subjects(subjects)
-        write_log(action, f"ID студента = {id_student}")
-        st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
-        time.sleep(1)
-        st.rerun()
+        try:
+            func.remove_student(subjects, id_student)
+            save_subjects(subjects)
+            write_log(action, f"ID студента = {id_student}")
+            st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+        except KeyError:
+            st.warning("Студента с таким ID не существует", icon = "❌")
 
 if action == "Добавить столбец":
     st.sidebar.subheader("Добавить столбец")
