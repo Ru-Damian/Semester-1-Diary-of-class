@@ -68,6 +68,7 @@ if name_table in list_subjects:
                 edited_df[col] = edited_df[col].clip(lower=0, upper=100)
             edited_df = func.count_mean_mark(edited_df)
             if st.button("Сохранить изменения"):
+                time.sleep(0.1)
                 subjects[name_table] = edited_df
                 save_subjects(subjects)
                 st.session_state.editing = False
@@ -75,7 +76,7 @@ if name_table in list_subjects:
                 st.success("Изменения сохранены!", icon="✅")
                 time.sleep(1)
                 st.rerun()
-        st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.xlsx")
+        st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
     else:
         st.write(name_table)
         filtered_df = st.session_state.filtered_df
