@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
-import functions as func
+import functions.init as func
 import time
 
 def write_log(action, info):
