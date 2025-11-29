@@ -25,9 +25,9 @@ def load_subjects():
                     list_groups = list()
                     for line in file:
                         id, fio, group = line.strip().split(";")
-                        list_id.append(id)
+                        list_id.append(int(id))
                         list_students.append(fio)
-                        list_groups.append(group)
+                        list_groups.append(int(group))
                 subjects[subject] = func.create_df_subject(list_id, list_students, list_groups)
             write_log("Создать таблицу предмета", f"Предмет = {subject}") # log
     list_groups = subjects[list_subjects[0]]["Группа"].to_list()
@@ -168,21 +168,21 @@ if action == "Отфильтровать":
         st.sidebar.warning("Находится в разработке", icon="⚠️")
 
 st.sidebar.title("Другое")
-other = st.sidebar.selectbox("", (["Не выбрано", "Посмотреть логи"])) #, "Добавить предмет"
+other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"])) #, "Добавить предмет"
 
 # Создает предмет, новую таблицу можно посмотреть, ломает таблицы "Все предметы", "Данные студента", "Данные по группам" до перезапуска streamlit
-# if other == "Добавить предмет":
-#     name_subject = st.sidebar.text_input("Название предмета")
-#     if st.sidebar.button("Добавить предмет"):
-#         with open("subjects.txt", "a", encoding="utf-8") as file:
-#             file.write(f"{name_subject}\n")
-#         subjects, list_subjects, list_groups = load_subjects()
-#         save_subjects(subjects)
-#         st.session_state.subjects = subjects
-#         write_log("Добавить новый предмет", f"Предмет = {name_subject}") # log
-#         st.success(f"Таблица для предмета {name_subject} успешно создан!", icon="✅")
-#         time.sleep(1)
-#         st.rerun()
+if other == "Добавить предмет":
+    name_subject = st.sidebar.text_input("Название предмета")
+    if st.sidebar.button("Добавить предмет"):
+        with open("subjects.txt", "a", encoding="utf-8") as file:
+            file.write(f"{name_subject}\n")
+        subjects, list_subjects, list_groups = load_subjects()
+        save_subjects(subjects)
+        st.session_state.subjects = subjects
+        write_log("Добавить новый предмет", f"Предмет = {name_subject}") # log
+        st.success(f"Таблица для предмета {name_subject} успешно создан!", icon="✅")
+        time.sleep(1)
+        st.rerun()
 
 if other == "Посмотреть логи":
     with open("logs.log", "r", encoding="utf-8") as file:
