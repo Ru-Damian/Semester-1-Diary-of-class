@@ -8,6 +8,17 @@ def write_log(action, info):
     with open("logs.log", "a", encoding="utf-8") as file:
         file.write(f"{time.strftime('[%Y-%m-%d %H:%M:%S]')} {action}: {info}\n")
 
+def write_students(id, name, group, action = "add"):
+    student = f"{str(id)};{name};{str(group)}\n"
+    if action == "add":
+        with open("students.txt", "a", encoding="utf-8") as file:
+            file.write(student)
+    if action == "remove":
+        with open("students.txt", "r", encoding="utf-8") as file:
+            students = [line for line in file.readlines() if line != student]
+        with open("students.txt", "w", encoding="utf-8") as file:
+            file.writelines(students)
+
 def load_subjects():
     with open("subjects.txt", "r", encoding="utf-8") as file:
         list_subjects = [s.strip() for s in file]
@@ -132,11 +143,23 @@ action = st.sidebar.selectbox("", (["Не выбрано"] + actions))
 
 if action == "Добавить студента":
     st.sidebar.subheader("Добавить студента")
-    name = st.sidebar.text_input("Имя студента")
+    name = st.sidebar.text_input("ФИО студента", max_chars = 50, value = "Петров Иван Сергеевич", placeholder = "Петров Иван Сергеевич")
     group = st.sidebar.number_input("Группа", value = 1, min_value = 1, max_value = 15)
-    if st.sidebar.button("Добавить студента"):
-        func.add_student(subjects, name, group)
+
+    if "checking" not in st.session_state:
+        st.session_state.checking = False
+    
+    if "Error:" not in func.check_text_input(name):
+        name = func.check_text_input(name)
+        st.session_state.checking = True
+    else:
+        st.sidebar.warning(func.check_text_input(name)[6:], icon = "❌")
+        st.session_state.checking = False
+    
+    if st.sidebar.button("Добавить студента") and st.session_state.checking:
+        id_student = func.add_student(subjects, name, group)
         save_subjects(subjects)
+        write_students(id_student, name, group)
         write_log(action, f"ФИО = {name}, Группа = {group}") # log
         st.success(f"Студент {name} ({group}) успешно добавлен!", icon="✅")
         time.sleep(1)
@@ -147,8 +170,9 @@ if action == "Удалить студента":
     id_student = st.sidebar.number_input("ID студента", value = 1002, min_value=1001)
     if st.sidebar.button("Удалить студента"):
         try:
-            func.remove_student(subjects, id_student)
+            name, group = func.remove_student(subjects, id_student)
             save_subjects(subjects)
+            write_students(id_student, name, group, action = "remove")
             write_log(action, f"ID студента = {id_student}")
             st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
             time.sleep(1)
