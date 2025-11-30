@@ -37,6 +37,49 @@ def save_subjects(subjects):
     for subject, df_subject in subjects.items():
         df_subject.to_csv(f"{subject}.csv")
 
+def show_edited_table(name_table):
+    st.write(name_table)
+    if not st.session_state.editing:
+        st.dataframe(subjects[name_table])
+        if st.button("Редактировать"):
+            st.session_state.editing = True
+            write_log("Редактировать", f"Предмет = {name_table}") # log
+            st.rerun()
+    else:
+        edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
+        edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
+        for col in edited_df.columns[2:]:
+            edited_df[col] = edited_df[col].clip(lower=0, upper=100)
+        edited_df = func.count_mean_mark(edited_df)
+        if st.button("Сохранить изменения"):
+            time.sleep(0.1)
+            subjects[name_table] = edited_df
+            save_subjects(subjects)
+            st.session_state.editing = False
+            write_log("Сохранить", f"Предмет = {name_table}") # log
+            st.success("Изменения сохранены!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+    st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
+
+def show_filtered_table(name_table):
+    st.write(name_table)
+    filtered_df = st.session_state.filtered_df
+    st.dataframe(filtered_df)
+    if st.button("Сбросить"):
+        st.session_state.filtering = False
+        st.rerun()
+
+def show_subject_table(name_table):
+    if "filtering" not in st.session_state:
+        st.session_state.filtering = False
+    if "editing" not in st.session_state:
+        st.session_state.editing = False
+    if st.session_state.filtering:
+        show_filtered_table(name_table)
+    else:
+        show_edited_table(name_table)
+
 subjects, list_subjects, list_groups = load_subjects()
 actions = ["Отфильтровать", "Добавить студента", "Удалить студента", "Добавить столбец"]
 
@@ -49,61 +92,33 @@ st.sidebar.title("Таблицы")
 name_table = st.sidebar.selectbox("", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
 
 if name_table in list_subjects:
-    if "filtering" not in st.session_state:
-        st.session_state.filtering = False
-    if not st.session_state.filtering:
-        st.write(name_table)
-        if "editing" not in st.session_state:
-            st.session_state.editing = False
-        if not st.session_state.editing:
-            st.dataframe(subjects[name_table])
-            if st.button("Редактировать"):
-                st.session_state.editing = True
-                write_log("Редактировать", f"Предмет = {name_table}") # log
-                st.rerun()
-        else:
-            edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
-            edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
-            for col in edited_df.columns[2:]:
-                edited_df[col] = edited_df[col].clip(lower=0, upper=100)
-            edited_df = func.count_mean_mark(edited_df)
-            if st.button("Сохранить изменения"):
-                time.sleep(0.1)
-                subjects[name_table] = edited_df
-                save_subjects(subjects)
-                st.session_state.editing = False
-                write_log("Сохранить", f"Предмет = {name_table}") # log
-                st.success("Изменения сохранены!", icon="✅")
-                time.sleep(1)
-                st.rerun()
-        st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
-    else:
-        st.write(name_table)
-        filtered_df = st.session_state.filtered_df
-        st.dataframe(filtered_df)
-        if st.button("Сбросить"):
-            st.session_state.filtering = False
-            st.rerun()
-else:
-    if name_table == "Все предметы":
-        st.write(name_table)
-        st.dataframe(func.info_subjects(subjects))
-    elif name_table == "Данные студента":
-        st.write("Все предметы")
-        st.dataframe(func.info_subjects(subjects))
-        id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
-        if st.sidebar.button("Получить данные"):
-            try:
-                df_student, df_marks = func.info_student(subjects, id_student)
-                st.write(name_table)
-                st.dataframe(df_student)
-                st.write("Оценки по предметам")
-                st.dataframe(df_marks)
-            except KeyError:
-                st.warning("Студента с таким ID не существует", icon = "❌")
-    else:
-        st.write(name_table)
-        st.dataframe(func.info_groups(subjects, list_groups))
+    show_subject_table(name_table)
+
+if name_table == "Все предметы":
+    st.write(name_table)
+    df_all_subjects = func.info_subjects(subjects)
+    st.dataframe(df_all_subjects)
+    st.download_button("Скачать", df_all_subjects.to_csv().encode("utf-8"), f"{name_table}.csv")
+
+if name_table == "Данные студента":
+    st.write("Все предметы")
+    st.dataframe(func.info_subjects(subjects))
+    id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
+    if st.sidebar.button("Получить данные"):
+        try:
+            df_student, df_marks = func.info_student(subjects, id_student)
+            st.write(name_table)
+            st.dataframe(df_student)
+            st.write("Оценки по предметам")
+            st.dataframe(df_marks)
+        except KeyError:
+            st.warning("Студента с таким ID не существует", icon = "❌")
+
+if name_table == "Данные по группам":
+    st.write(name_table)
+    df_groups = func.info_groups(subjects, list_groups)
+    st.dataframe(df_groups)
+    st.download_button("Скачать", df_groups.to_csv().encode("utf-8"), f"{name_table}.csv")
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox("", (["Не выбрано"] + actions))
@@ -170,7 +185,6 @@ if action == "Отфильтровать":
 st.sidebar.title("Другое")
 other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"])) #, "Добавить предмет"
 
-# Создает предмет, новую таблицу можно посмотреть, ломает таблицы "Все предметы", "Данные студента", "Данные по группам" до перезапуска streamlit
 if other == "Добавить предмет":
     name_subject = st.sidebar.text_input("Название предмета")
     if st.sidebar.button("Добавить предмет"):
