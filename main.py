@@ -81,13 +81,14 @@ def show_subject_table(name_table):
         show_edited_table(name_table)
 
 subjects, list_subjects, list_groups = load_subjects()
-actions = ["Отфильтровать", "Добавить студента", "Удалить студента", "Добавить столбец"]
 
 if "subjects" not in st.session_state:
     st.session_state.subjects = subjects
 subjects = st.session_state.subjects
 st.set_page_config(layout="wide")
 
+
+# Таблицы
 st.sidebar.title("Таблицы")
 name_table = st.sidebar.selectbox("", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
 
@@ -119,6 +120,12 @@ if name_table == "Данные по группам":
     df_groups = func.info_groups(subjects, list_groups)
     st.dataframe(df_groups)
     st.download_button("Скачать", df_groups.to_csv().encode("utf-8"), f"{name_table}.csv")
+
+
+# Действия
+actions = ["Добавить студента", "Удалить студента", "Добавить столбец"]
+if name_table in list_subjects:
+    actions = ["Отфильтровать"] + actions
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox("", (["Не выбрано"] + actions))
@@ -167,21 +174,20 @@ if action == "Добавить столбец":
         st.rerun()
 
 if action == "Отфильтровать":
-    try:
-        error = subjects[name_table]
-        st.sidebar.subheader("Параметры фильтра")
-        column_filter = st.sidebar.selectbox("Столбец для фильтрации", (subjects[name_table].columns[2:]))
-        x_filter = st.sidebar.slider(f"{column_filter} > значения", value=50, min_value=10, max_value=90)
-        low_filter = st.sidebar.checkbox(f"{column_filter} < значения")
-        if st.sidebar.button("Показать результат"):
-            st.write(name_table)
-            filtered_df, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
-            st.session_state.filtering = True
-            st.session_state.filtered_df = filtered_df
-            st.rerun()
-    except KeyError:
-        st.sidebar.warning("Находится в разработке", icon="⚠️")
+    error = subjects[name_table]
+    st.sidebar.subheader("Параметры фильтра")
+    column_filter = st.sidebar.selectbox("Столбец для фильтрации", (subjects[name_table].columns[2:]))
+    x_filter = st.sidebar.slider(f"{column_filter} > значения", value=50, min_value=10, max_value=90)
+    low_filter = st.sidebar.checkbox(f"{column_filter} < значения")
+    if st.sidebar.button("Показать результат"):
+        st.write(name_table)
+        filtered_df, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
+        st.session_state.filtering = True
+        st.session_state.filtered_df = filtered_df
+        st.rerun()
 
+
+# Другие действия
 st.sidebar.title("Другое")
 other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"])) #, "Добавить предмет"
 
