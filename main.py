@@ -55,6 +55,26 @@ def save_info_student(id, df_marks):
         df_subject.loc[id, "Оценка дз":"Посещаемость"] = new_student_row
     save_subjects(subjects)
 
+def make_non_editable_column_config(df, non_editable_columns, index = "ID", block_index = True):
+    config = dict()
+    if block_index:
+        if df.index.dtype in ['int64', 'float64']:
+            config[index] = st.column_config.NumberColumn(index, disabled=True)
+        else:
+            config[index] = st.column_config.TextColumn(index, disabled=True)
+    for col in df.columns:
+        if col in non_editable_columns:
+            if df[col].dtype in ['int64', 'float64']:
+                config[col] = st.column_config.NumberColumn(col, disabled=True)
+            else:
+                config[col] = st.column_config.TextColumn(col, disabled=True)
+        else:
+            if df[col].dtype in ['int64', 'float64']:
+                config[col] = st.column_config.NumberColumn(col, min_value=0, max_value=100)
+            else:
+                config[col] = st.column_config.TextColumn(col, max_chars=50)
+    return config
+
 def edit_button(edit_key):
     if st.button("Редактировать"):
         st.session_state[edit_key] = True
@@ -69,14 +89,12 @@ def show_filtered_subject_table():
         st.rerun()
 
 def show_edited_subject_table(name_table):
-    edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
-    edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
-    for col in edited_df.columns[2:]:
-        edited_df[col] = edited_df[col].clip(lower=0, upper=100)
-    edited_df = func.count_mean_mark(edited_df)
+    config_edited_subject = make_non_editable_column_config(subjects[name_table], ["Студент", "Группа", "Средняя оценка"])
+    edited_df_subject = st.data_editor(subjects[name_table], num_rows="fixed", column_config=config_edited_subject)
+    edited_df_subject = func.count_mean_mark(edited_df_subject)
     if st.button("Сохранить изменения"):
         time.sleep(0.1)
-        subjects[name_table] = edited_df
+        subjects[name_table] = edited_df_subject
         save_subjects(subjects)
         st.session_state.editing_subject = False
         write_log("Сохранить", f"Предмет = {name_table}") # log
@@ -103,13 +121,11 @@ def show_edited_info_student_table(id):
     df_student, df_marks = func.info_student(subjects, id)
     st.write(name_table)
     st.dataframe(df_student)
-    # edited_df_student = st.data_editor(df_student, num_rows="fixed")
-    # edited_df_student["Группа"] = edited_df_student["Группа"].clip(lower=1, upper=15)
+    # config_edited_df_student = make_non_editable_column_config(df_student, ["Средний балл", "Посещаемость"])
+    # edited_df_student = st.data_editor(df_student, num_rows="fixed", column_config=config_edited_df_student)
     st.write("Оценки по предметам")
-    edited_df_marks = st.data_editor(df_marks, num_rows="fixed")
-    # возможно можно сделать на этапе создания датафреймов
-    for col in edited_df_marks.columns:
-        edited_df_marks[col] = edited_df_marks[col].clip(lower=0, upper=100)
+    config_edited_df_marks = make_non_editable_column_config(df_marks, ["Средняя оценка"], index="Предмет")
+    edited_df_marks = st.data_editor(df_marks, num_rows="fixed", column_config=config_edited_df_marks)
     edited_df_marks = func.count_mean_mark(edited_df_marks)
     if st.button("Сохранить изменения"):
         time.sleep(0.1)
