@@ -4,7 +4,7 @@ import numpy as np
 # Функция для подсчета среденей оценки
 def count_mean_mark(df_subject, name_column = "Средняя оценка", output = "df"):
     id_mean = df_subject.columns.get_loc(name_column)
-    id_mark1 = ("Студент" in df_subject.columns) + ("Группа" in df_subject.columns)
+    id_mark1 = ("Студент" in df_subject.columns) + ("Группа" in df_subject.columns) + ("Предмет" in df_subject.columns)
     df_subject[name_column] = list(map(int, df_subject.iloc[:, id_mark1:id_mean].mean(axis=1)))
     if output == "df":
         return df_subject

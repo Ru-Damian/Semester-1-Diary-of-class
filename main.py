@@ -48,37 +48,40 @@ def save_subjects(subjects):
     for subject, df_subject in subjects.items():
         df_subject.to_csv(f"{subject}.csv")
 
-def show_edited_table(name_table):
-    st.write(name_table)
-    if not st.session_state.editing:
-        st.dataframe(subjects[name_table])
-        if st.button("Редактировать"):
-            st.session_state.editing = True
-            write_log("Редактировать", f"Предмет = {name_table}") # log
-            st.rerun()
-    else:
-        edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
-        edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
-        for col in edited_df.columns[2:]:
-            edited_df[col] = edited_df[col].clip(lower=0, upper=100)
-        edited_df = func.count_mean_mark(edited_df)
-        if st.button("Сохранить изменения"):
-            time.sleep(0.1)
-            subjects[name_table] = edited_df
-            save_subjects(subjects)
-            st.session_state.editing = False
-            write_log("Сохранить", f"Предмет = {name_table}") # log
-            st.success("Изменения сохранены!", icon="✅")
-            time.sleep(1)
-            st.rerun()
-    st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
+def save_info_student(id, df_marks):
+    for subject, df_subject in subjects.items():
+        new_student_row = df_marks.loc[subject, :"Посещаемость"]
+        # надо, чтобы само находила первый столбец оценки
+        df_subject.loc[id, "Оценка дз":"Посещаемость"] = new_student_row
+    save_subjects(subjects)
 
-def show_filtered_table(name_table):
-    st.write(name_table)
+def edit_button():
+    if st.button("Редактировать"):
+        st.session_state.editing = True
+        write_log("Редактировать", f"Предмет = {name_table}") # log
+        st.rerun()
+
+def show_filtered_subject_table():
     filtered_df = st.session_state.filtered_df
     st.dataframe(filtered_df)
     if st.button("Сбросить"):
         st.session_state.filtering = False
+        st.rerun()
+
+def show_edited_subject_table(name_table):
+    edited_df = st.data_editor(subjects[name_table], num_rows="fixed")
+    edited_df["Группа"] = edited_df["Группа"].clip(lower=1, upper=15)
+    for col in edited_df.columns[2:]:
+        edited_df[col] = edited_df[col].clip(lower=0, upper=100)
+    edited_df = func.count_mean_mark(edited_df)
+    if st.button("Сохранить изменения"):
+        time.sleep(0.1)
+        subjects[name_table] = edited_df
+        save_subjects(subjects)
+        st.session_state.editing = False
+        write_log("Сохранить", f"Предмет = {name_table}") # log
+        st.success("Изменения сохранены!", icon="✅")
+        time.sleep(1)
         st.rerun()
 
 def show_subject_table(name_table):
@@ -86,10 +89,50 @@ def show_subject_table(name_table):
         st.session_state.filtering = False
     if "editing" not in st.session_state:
         st.session_state.editing = False
+    st.write(name_table)
     if st.session_state.filtering:
-        show_filtered_table(name_table)
+        show_filtered_subject_table()
+    elif st.session_state.editing:
+        show_edited_subject_table(name_table)
     else:
-        show_edited_table(name_table)
+        st.dataframe(subjects[name_table])
+        edit_button()
+        st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
+
+def show_edited_info_student_table(id):
+    df_student, df_marks = func.info_student(subjects, id)
+    st.dataframe(df_student)
+    # edited_df_student = st.data_editor(df_student, num_rows="fixed")
+    # edited_df_student["Группа"] = edited_df_student["Группа"].clip(lower=1, upper=15)
+    edited_df_marks = st.data_editor(df_marks, num_rows="fixed")
+    # возможно можно сделать на этапе создания датафреймов
+    for col in edited_df_marks.columns[1:]:
+        edited_df_marks[col] = edited_df_marks[col].clip(lower=0, upper=100)
+    edited_df_marks = func.count_mean_mark(edited_df_marks)
+    if st.button("Сохранить изменения"):
+        time.sleep(0.1)
+        save_info_student(id, edited_df_marks)
+        st.session_state.editing = False
+        write_log("Сохранить", f"Предмет = {name_table}") # log
+        st.success("Изменения сохранены!", icon="✅")
+        time.sleep(1)
+        st.rerun()
+
+def show_info_student_table(id):
+    if "editing" not in st.session_state:
+        st.session_state.editing = False
+    if st.session_state.editing:
+        show_edited_info_student_table(id)
+    else:
+        try:
+            df_student, df_marks = func.info_student(subjects, id)
+            st.write(name_table)
+            st.dataframe(df_student)
+            st.write("Оценки по предметам")
+            st.dataframe(df_marks)
+            edit_button()
+        except KeyError:
+            st.warning("Студента с таким ID не существует", icon = "❌")
 
 subjects, list_subjects, list_groups = load_subjects()
 
@@ -101,7 +144,7 @@ st.set_page_config(layout="wide")
 
 # Таблицы
 st.sidebar.title("Таблицы")
-name_table = st.sidebar.selectbox("", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
+name_table = st.sidebar.selectbox(" ", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
 
 if name_table in list_subjects:
     show_subject_table(name_table)
@@ -116,15 +159,13 @@ if name_table == "Данные студента":
     st.write("Все предметы")
     st.dataframe(func.info_subjects(subjects))
     id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
-    if st.sidebar.button("Получить данные"):
-        try:
-            df_student, df_marks = func.info_student(subjects, id_student)
-            st.write(name_table)
-            st.dataframe(df_student)
-            st.write("Оценки по предметам")
-            st.dataframe(df_marks)
-        except KeyError:
-            st.warning("Студента с таким ID не существует", icon = "❌")
+    if "clicking" not in st.session_state:
+        st.session_state.clicking = False
+    if st.sidebar.button("Получить данные") or st.session_state.clicking:
+        st.session_state.clicking = True
+        show_info_student_table(id_student)
+else:
+    st.session_state.clicking = False
 
 if name_table == "Данные по группам":
     st.write(name_table)
@@ -139,7 +180,7 @@ if name_table in list_subjects:
     actions = ["Отфильтровать"] + actions
 
 st.sidebar.title("Действия")
-action = st.sidebar.selectbox("", (["Не выбрано"] + actions))
+action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
 
 if action == "Добавить студента":
     st.sidebar.subheader("Добавить студента")
@@ -198,7 +239,6 @@ if action == "Добавить столбец":
         st.rerun()
 
 if action == "Отфильтровать":
-    error = subjects[name_table]
     st.sidebar.subheader("Параметры фильтра")
     column_filter = st.sidebar.selectbox("Столбец для фильтрации", (subjects[name_table].columns[2:]))
     x_filter = st.sidebar.slider(f"{column_filter} > значения", value=50, min_value=10, max_value=90)
@@ -213,7 +253,7 @@ if action == "Отфильтровать":
 
 # Другие действия
 st.sidebar.title("Другое")
-other = st.sidebar.selectbox("", (["Не выбрано", "Добавить предмет", "Посмотреть логи"])) #, "Добавить предмет"
+other = st.sidebar.selectbox(" ", (["Не выбрано", "Добавить предмет", "Посмотреть логи"]))
 
 if other == "Добавить предмет":
     name_subject = st.sidebar.text_input("Название предмета")
