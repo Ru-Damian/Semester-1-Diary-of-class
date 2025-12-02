@@ -55,17 +55,17 @@ def save_info_student(id, df_marks):
         df_subject.loc[id, "Оценка дз":"Посещаемость"] = new_student_row
     save_subjects(subjects)
 
-def edit_button():
+def edit_button(edit_key):
     if st.button("Редактировать"):
-        st.session_state.editing = True
+        st.session_state[edit_key] = True
         write_log("Редактировать", f"Предмет = {name_table}") # log
         st.rerun()
 
 def show_filtered_subject_table():
-    filtered_df = st.session_state.filtered_df
-    st.dataframe(filtered_df)
+    filtered_df_subject = st.session_state.filtered_df_subject
+    st.dataframe(filtered_df_subject)
     if st.button("Сбросить"):
-        st.session_state.filtering = False
+        st.session_state.filtering_subject = False
         st.rerun()
 
 def show_edited_subject_table(name_table):
@@ -78,50 +78,52 @@ def show_edited_subject_table(name_table):
         time.sleep(0.1)
         subjects[name_table] = edited_df
         save_subjects(subjects)
-        st.session_state.editing = False
+        st.session_state.editing_subject = False
         write_log("Сохранить", f"Предмет = {name_table}") # log
         st.success("Изменения сохранены!", icon="✅")
         time.sleep(1)
         st.rerun()
 
 def show_subject_table(name_table):
-    if "filtering" not in st.session_state:
-        st.session_state.filtering = False
-    if "editing" not in st.session_state:
-        st.session_state.editing = False
+    if "filtering_subject" not in st.session_state:
+        st.session_state.filtering_subject = False
+    if "editing_subject" not in st.session_state:
+        st.session_state.editing_subject = False
     st.write(name_table)
-    if st.session_state.filtering:
+    if st.session_state.filtering_subject:
         show_filtered_subject_table()
-    elif st.session_state.editing:
+    elif st.session_state.editing_subject:
         show_edited_subject_table(name_table)
     else:
         st.dataframe(subjects[name_table])
-        edit_button()
+        edit_button("editing_subject")
         st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
 
 def show_edited_info_student_table(id):
     df_student, df_marks = func.info_student(subjects, id)
+    st.write(name_table)
     st.dataframe(df_student)
     # edited_df_student = st.data_editor(df_student, num_rows="fixed")
     # edited_df_student["Группа"] = edited_df_student["Группа"].clip(lower=1, upper=15)
+    st.write("Оценки по предметам")
     edited_df_marks = st.data_editor(df_marks, num_rows="fixed")
     # возможно можно сделать на этапе создания датафреймов
-    for col in edited_df_marks.columns[1:]:
+    for col in edited_df_marks.columns:
         edited_df_marks[col] = edited_df_marks[col].clip(lower=0, upper=100)
     edited_df_marks = func.count_mean_mark(edited_df_marks)
     if st.button("Сохранить изменения"):
         time.sleep(0.1)
         save_info_student(id, edited_df_marks)
-        st.session_state.editing = False
+        st.session_state.editing_student = False
         write_log("Сохранить", f"Предмет = {name_table}") # log
         st.success("Изменения сохранены!", icon="✅")
         time.sleep(1)
         st.rerun()
 
 def show_info_student_table(id):
-    if "editing" not in st.session_state:
-        st.session_state.editing = False
-    if st.session_state.editing:
+    if "editing_student" not in st.session_state:
+        st.session_state.editing_student = False
+    if st.session_state.editing_student:
         show_edited_info_student_table(id)
     else:
         try:
@@ -130,7 +132,7 @@ def show_info_student_table(id):
             st.dataframe(df_student)
             st.write("Оценки по предметам")
             st.dataframe(df_marks)
-            edit_button()
+            edit_button("editing_student")
         except KeyError:
             st.warning("Студента с таким ID не существует", icon = "❌")
 
@@ -148,6 +150,8 @@ name_table = st.sidebar.selectbox(" ", (["Все предметы", "Данны�
 
 if name_table in list_subjects:
     show_subject_table(name_table)
+else:
+    st.session_state.editing_subject = False
 
 if name_table == "Все предметы":
     st.write(name_table)
@@ -159,13 +163,14 @@ if name_table == "Данные студента":
     st.write("Все предметы")
     st.dataframe(func.info_subjects(subjects))
     id_student = st.sidebar.number_input("ID студента", value=1001, min_value=1001)
-    if "clicking" not in st.session_state:
-        st.session_state.clicking = False
-    if st.sidebar.button("Получить данные") or st.session_state.clicking:
-        st.session_state.clicking = True
+    if "clicking_student" not in st.session_state:
+        st.session_state.clicking_student = False
+    if st.sidebar.button("Получить данные") or st.session_state.clicking_student:
+        st.session_state.clicking_student = True
         show_info_student_table(id_student)
 else:
-    st.session_state.clicking = False
+    st.session_state.clicking_student = False
+    st.session_state.editing_student = False
 
 if name_table == "Данные по группам":
     st.write(name_table)
@@ -245,9 +250,9 @@ if action == "Отфильтровать":
     low_filter = st.sidebar.checkbox(f"{column_filter} < значения")
     if st.sidebar.button("Показать результат"):
         st.write(name_table)
-        filtered_df, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
-        st.session_state.filtering = True
-        st.session_state.filtered_df = filtered_df
+        filtered_df_subject, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
+        st.session_state.filtering_subject = True
+        st.session_state.filtered_df_subject = filtered_df_subject
         st.rerun()
 
 

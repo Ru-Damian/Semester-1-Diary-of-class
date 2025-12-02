@@ -14,8 +14,8 @@ def info_student(subjects, id_student, name_subject = "all"):
     df_marks = pd.DataFrame(data_marks).set_index("Предмет")
     df_student = pd.DataFrame({
         "ID": id_student,
-        "Студент": df_marks["Студент"][0],
-        "Группа": df_marks["Группа"][0],
+        "Студент": df_marks["Студент"].iloc[0],
+        "Группа": df_marks["Группа"].iloc[0],
         "Средний балл": int(df_marks["Средняя оценка"].mean(axis = 0)),
         "Посещаемость": int(df_marks["Посещаемость"].mean(axis = 0))
         }, index=[id_student]).set_index("ID")
