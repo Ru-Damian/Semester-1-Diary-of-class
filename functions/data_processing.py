@@ -1,14 +1,20 @@
 import pandas as pd
 import numpy as np
 
+def int_non_error_nan(mean):
+    if pd.isna(mean):
+        return mean
+    else:
+        return int(mean)
+
 # Функция для подсчета среденей оценки
-def count_mean_mark(df_subject, name_column = "Средняя оценка", output = "df"):
-    id_mean = df_subject.columns.get_loc(name_column)
-    id_mark1 = ("Студент" in df_subject.columns) + ("Группа" in df_subject.columns) + ("Предмет" in df_subject.columns)
-    df_subject[name_column] = list(map(int, df_subject.iloc[:, id_mark1:id_mean].mean(axis=1)))
+def count_mean_mark(df, name_column = "Средняя оценка", output = "df"):
+    id_mean = df.columns.get_loc(name_column)
+    id_mark1 = ("Студент" in df.columns) + ("Группа" in df.columns) + ("Предмет" in df.columns)
+    df[name_column] = list(map(int_non_error_nan, df.iloc[:, id_mark1:id_mean].mean(axis=1)))
     if output == "df":
-        return df_subject
-    return df_subject[name_column]
+        return df
+    return df[name_column]
 
 # Функция для создания таблицы предмета с синтетическими данными
 def create_df_subject(list_id, list_students, list_groups):
@@ -43,7 +49,7 @@ def filter_df_column(df_subject, name_column, x, type_f = "compare", low = True)
 # before -- создать столбец перед столбцом name_column_before
 # end    -- создать столбец в конце таблицы
 def add_column(df_subject, title, place = "before", name_column_before = "Средняя оценка"):
-    data = 0
+    data = np.nan
     if place == "before":
         id_column = df_subject.columns.get_loc(name_column_before)
         df_subject.insert(loc=id_column, column=title, value=data)

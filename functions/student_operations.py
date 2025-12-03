@@ -7,7 +7,7 @@ def add_student(subjects, name, group):
     for df_subject in subjects.values():
         if np.isnan(id):
             id = df_subject.index.tolist()[-1] + 1
-        df_subject.loc[id] = [name, group] + [0 for p in range(df_subject.shape[1] - 2)]
+        df_subject.loc[id] = [name, group] + [np.nan for p in range(df_subject.shape[1] - 2)]
     return id
 
 # Функция для удаления студента
