@@ -8,7 +8,7 @@ def check_fio_input(fio:str):
     Если fio соответствует требованиям, то возращает fio, где каждое слово начинает с заглавной буквы, а все остальные -- строчные.
     Если есть ошибки, то возвращает подсказка, как исправить fio.
     """
-    words = fio.split(" ")
+    words = [word for word in fio.split(" ") if word != ""]
     if len(words) < 2:
         return "Error:Минимум 2 слова"
     if len(words) > 3:
@@ -32,6 +32,8 @@ def check_title_column_input(title_column, type_column = "mark"):
     Если type_column = "mark" в начало названия столбца ставится "Оценка ".
     Возвращает измененное title_column, где первое слово начинается с заглавной буквы.
     """
+    if title_column == "" or (len(set(title_column)) == 1 and title_column[0] == " "):
+        raise ValueError("Пустое название столбца")
     title_column = title_column.upper().replace("ОЦЕНКА", "")
     while title_column[0] == " ":
         title_column = title_column.upper().replace(" ", "", 1)

@@ -246,7 +246,7 @@ st.sidebar.title("Таблицы")
 name_table = st.sidebar.selectbox(" ", (["Все предметы", "Данные студента", "Данные по группам"] + list_subjects))
 
 if name_table in list_subjects:
-    show_subject_table(name_table)
+    show_subject_table()
 else:
     st.session_state.editing_subject = False
     st.session_state.filtering_subject = False
@@ -265,7 +265,7 @@ if name_table == "Данные студента":
         st.session_state.clicking_student = False
     if st.sidebar.button("Получить данные") or st.session_state.clicking_student:
         st.session_state.clicking_student = True
-        show_info_student_table(id_student)
+        show_info_student_table()
 else:
     st.session_state.clicking_student = False
     st.session_state.editing_student = False
@@ -280,7 +280,7 @@ if name_table == "Данные по группам":
 # Действия
 actions = ["Добавить студента", "Удалить студента"]
 if name_table in list_subjects:
-    actions = ["Отфильтровать"] + actions + ["Добавить столбец"]
+    actions = ["Отфильтровать", "Добавить столбец"] + actions
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
@@ -326,20 +326,23 @@ if action == "Удалить студента":
 
 if action == "Добавить столбец":
     st.sidebar.subheader("Добавить столбец")
-    title = st.sidebar.text_input("Название")
+    title = st.sidebar.text_input("Название", max_chars = 20)
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
     if st.sidebar.button("Добавить столбец"):
-        if type_column == "Для оценки":
-            title = func.check_title_column_input(title)
-            func.add_column(subjects[name_table], title)
-        else:
-            title = func.check_title_column_input(title, type_column="other")
-            func.add_column(subjects[name_table], title, place="end")
-        save_subjects(subjects)
-        write_log(action, f"Название = {title}, Тип столбца = {type_column}") # log
-        st.success(f"Столбец {title} успешно создан!", icon="✅")
-        time.sleep(1)
-        st.rerun()
+        try:
+            if type_column == "Для оценки":
+                title = func.check_title_column_input(title)
+                func.add_column(subjects[name_table], title)
+            else:
+                title = func.check_title_column_input(title, type_column="other")
+                func.add_column(subjects[name_table], title, place="end")
+            save_subjects(subjects)
+            write_log(action, f"Название = {title}, Тип столбца = {type_column}") # log
+            st.success(f"Столбец {title} успешно создан!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+        except ValueError:
+            st.sidebar.warning("Заполните поле \"Название\"", icon = "❌")
 
 if action == "Отфильтровать":
     st.sidebar.subheader("Параметры фильтра")
