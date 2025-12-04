@@ -59,7 +59,7 @@ def info_subjects(subjects):
 # Функция для вывода средних оценок по всем предметам по группам
 def info_groups(subjects, list_groups):
     data_groups = dict()
-    data_groups["Группа"] = sorted(set(list_groups))
+    data_groups["Группа"] = list_groups
     data_attendance = list()
     cnt = 0
     for subject, df_subject in subjects.items():

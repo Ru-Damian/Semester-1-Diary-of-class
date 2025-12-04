@@ -4,11 +4,31 @@ import streamlit as st
 import functions.init as func
 import time
 
-def write_log(action, info):
+def write_log(action:str, info:str) -> None:
+    """
+    Записывает лог в файл logs.log
+    
+    :param action: Действие, которое было сделано
+    :type action: str
+    :param info: Детали того действия, которое произошло
+    :type info: str
+    """
     with open("logs.log", "a", encoding="utf-8") as file:
         file.write(f"{time.strftime('[%Y-%m-%d %H:%M:%S]')} {action}: {info}\n")
 
-def write_students(id, name, group, action = "add"):
+def write_students(id:int, name:str, group:int, action:str = "add") -> None:
+    """
+    Сохраняет добавление или удаление студента в файле student.txt
+    
+    :param id: ID студента, которого добавляют или удаляют из файла students.txt
+    :type id: int
+    :param name: ФИО студента, которого добавляют или удаляют из файла students.txt
+    :type name: str
+    :param group: Номер группы студента, которого добавляют или удаляют из файла students.txt
+    :type group: int
+    :param action: Значение "add" активирует добавление студента, значение "remove" -- удаление студента
+    :type action: str
+    """
     student = f"{str(id)};{name};{str(group)}\n"
     if action == "add":
         with open("students.txt", "a", encoding="utf-8") as file:
@@ -19,7 +39,14 @@ def write_students(id, name, group, action = "add"):
         with open("students.txt", "w", encoding="utf-8") as file:
             file.writelines(students)
 
-def load_subjects():
+def load_subjects() -> tuple[dict[str, pd.DataFrame], list[str], list[int]]:
+    """
+    Выгружает список предметов из subjects.txt. Создает словарь {название предмета:pd.Dataframe}.
+    pd.Dataframe создается из файла .csv, если такого нет используется func.create_df_subject(), а данные для нее берутся из "students.txt".
+    
+    :return: Словарь {название предмета:таблица предмета}, массив с названием всех предметов, массив с номерами всех групп
+    :rtype: tuple[dict[str, pd.DataFrame], list[str], list[int]]
+    """
     with open("subjects.txt", "r", encoding="utf-8") as file:
         list_subjects = [s.strip() for s in file]
     subjects = dict()
@@ -41,21 +68,49 @@ def load_subjects():
                         list_groups.append(int(group))
                 subjects[subject] = func.create_df_subject(list_id, list_students, list_groups)
             write_log("Создать таблицу предмета", f"Предмет = {subject}") # log
-    list_groups = subjects[list_subjects[0]]["Группа"].to_list()
+    list_groups = sorted(set(subjects[list_subjects[0]]["Группа"].to_list()))
     return subjects, list_subjects, list_groups
 
-def save_subjects(subjects):
+def save_subjects(subjects:dict[str, pd.DataFrame]) -> None:
+    """
+    Сохраняет все pd.DataFrames из словаря subjects по файлам .csv.
+    
+    :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
+    :type subjects: dict[str, pd.DataFrame]
+    """
     for subject, df_subject in subjects.items():
         df_subject.to_csv(f"{subject}.csv")
 
-def save_info_student(id, df_marks):
+def save_info_student(id:int, df_marks:pd.DataFrame) -> None:
+    """
+    Сохраняет изменения df_marks во все таблицы предметов.
+    
+    :param id: ID студента, чьи оценки были изменены
+    :type id: int
+    :param df_marks: pd.Dataframe с оценками студента по всем предметам
+    :type df_marks: pd.DataFrame
+    """
     for subject, df_subject in subjects.items():
         new_student_row = df_marks.loc[subject, df_subject.columns[2:]]
         df_subject.loc[id, df_subject.columns[2]:] = new_student_row
         df_subject = func.count_mean_mark(df_subject)
     save_subjects(subjects)
 
-def make_non_editable_column_config(df, non_editable_columns, index = "ID", block_index = True):
+def make_non_editable_column_config(df:pd.DataFrame, non_editable_columns:list[str], index:any = "ID", block_index:bool = True) -> dict[str, dict]:
+    """
+    Создает column_config с блоком на редактирование столбцов из non_editable_columns для st.data_editor.
+    
+    :param df: pd.DataFrame, для которого нужно создать column_config
+    :type df: pd.DataFrame
+    :param non_editable_columns: Массив из названий столбцов, которым нужно установить блок на редактирование
+    :type non_editable_columns: list[str]
+    :param index: Название столбца индексов
+    :type index: any
+    :param block_index: True -- блокировать индексы, False -- не блокировать индексы
+    :type block_index: bool
+    :return: готовый column_config для st.data_editor
+    :rtype: dict[str, dict]
+    """
     config = dict()
     if block_index:
         if df.index.dtype in ['int64', 'float64']:
@@ -75,20 +130,32 @@ def make_non_editable_column_config(df, non_editable_columns, index = "ID", bloc
                 config[col] = st.column_config.TextColumn(col, max_chars=50)
     return config
 
-def edit_button(edit_key):
+def edit_button(edit_key:any) -> None:
+    """
+    Создает кнопку, которая меняет st.session_state[edit_key] на True
+    
+    :param edit_key: Ключ к переменной, которая сохранена в st.session_state
+    :type edit_key: any
+    """
     if st.button("Редактировать"):
         st.session_state[edit_key] = True
         write_log("Редактировать", f"Предмет = {name_table}") # log
         st.rerun()
 
-def show_filtered_subject_table():
+def show_filtered_subject_table() -> None:
+    """
+    Отображает отфильтрованный pd.dataframe и создает кнопку, чтобы вернуть исходный pd.dataframe.
+    """
     filtered_df_subject = st.session_state.filtered_df_subject
     st.dataframe(filtered_df_subject)
     if st.button("Сбросить"):
         st.session_state.filtering_subject = False
         st.rerun()
 
-def show_edited_subject_table(name_table):
+def show_edited_subject_table() -> None: #subjects:dict[str, pd.Dataframe], subject:str
+    """
+    Отображает редактируемый pd.dataframe через st.data_editor и создает кнопку, чтобы сохранить измения в pd.dataframe.
+    """
     config_edited_subject = make_non_editable_column_config(subjects[name_table], ["Студент", "Группа", "Средняя оценка"])
     edited_df_subject = st.data_editor(subjects[name_table], num_rows="fixed", column_config=config_edited_subject)
     edited_df_subject = func.count_mean_mark(edited_df_subject)
@@ -102,7 +169,13 @@ def show_edited_subject_table(name_table):
         time.sleep(1)
         st.rerun()
 
-def show_subject_table(name_table):
+def show_subject_table() -> None: #subjects:dict[str, pd.Dataframe], subject:str
+    """
+    Создает флаги состояний. 
+    st.session_state.filtering_subject == True -> вызывает show_filtered_subject_table()
+    st.session_state.editing_subject == True -> вызывает show_edited_subject_table()
+    Если оба флага не активны, то отбражается pd.Dataframe с кнопками "Редактировать" и "Скачать"
+    """
     if "filtering_subject" not in st.session_state:
         st.session_state.filtering_subject = False
     if "editing_subject" not in st.session_state:
@@ -111,14 +184,17 @@ def show_subject_table(name_table):
     if st.session_state.filtering_subject:
         show_filtered_subject_table()
     elif st.session_state.editing_subject:
-        show_edited_subject_table(name_table)
+        show_edited_subject_table()
     else:
         st.dataframe(subjects[name_table])
         edit_button("editing_subject")
         st.download_button("Скачать", subjects[name_table].to_csv().encode("utf-8"), f"{name_table}.csv")
 
-def show_edited_info_student_table(id):
-    df_student, df_marks = func.info_student(subjects, id)
+def show_edited_info_student_table() -> None: #subjects:dict[str, pd.Dataframe], id_student:int
+    """
+    Отображает редактируемый pd.dataframe через st.data_editor и создает кнопку, чтобы сохранить измения в pd.dataframe.
+    """
+    df_student, df_marks = func.info_student(subjects, id_student)
     st.write(name_table)
     st.dataframe(df_student)
     # config_edited_df_student = make_non_editable_column_config(df_student, ["Средний балл", "Посещаемость"])
@@ -129,21 +205,26 @@ def show_edited_info_student_table(id):
     edited_df_marks = func.count_mean_mark(edited_df_marks)
     if st.button("Сохранить изменения"):
         time.sleep(0.1)
-        save_info_student(id, edited_df_marks)
+        save_info_student(id_student, edited_df_marks)
         st.session_state.editing_student = False
         write_log("Сохранить", f"Предмет = {name_table}") # log
         st.success("Изменения сохранены!", icon="✅")
         time.sleep(1)
         st.rerun()
 
-def show_info_student_table(id):
+def show_info_student_table() -> None: #subjects:dict[str, pd.Dataframe], id_student:int
+    """
+    Создает флаг редактирования. 
+    st.session_state.editing_student == True -> вызывает show_edited_info_student_table()
+    Если флаг не активен, то отбражается pd.Dataframe с кнопкой "Редактировать"
+    """
     if "editing_student" not in st.session_state:
         st.session_state.editing_student = False
     if st.session_state.editing_student:
-        show_edited_info_student_table(id)
+        show_edited_info_student_table()
     else:
         try:
-            df_student, df_marks = func.info_student(subjects, id)
+            df_student, df_marks = func.info_student(subjects, id_student)
             st.write(name_table)
             st.dataframe(df_student)
             st.write("Оценки по предметам")
