@@ -50,9 +50,9 @@ def save_subjects(subjects):
 
 def save_info_student(id, df_marks):
     for subject, df_subject in subjects.items():
-        new_student_row = df_marks.loc[subject, :"Посещаемость"]
-        # надо, чтобы само находила первый столбец оценки
-        df_subject.loc[id, "Оценка дз":"Посещаемость"] = new_student_row
+        new_student_row = df_marks.loc[subject, df_subject.columns[2:]]
+        df_subject.loc[id, df_subject.columns[2]:] = new_student_row
+        df_subject = func.count_mean_mark(df_subject)
     save_subjects(subjects)
 
 def make_non_editable_column_config(df, non_editable_columns, index = "ID", block_index = True):
@@ -168,6 +168,7 @@ if name_table in list_subjects:
     show_subject_table(name_table)
 else:
     st.session_state.editing_subject = False
+    st.session_state.filtering_subject = False
 
 if name_table == "Все предметы":
     st.write(name_table)
@@ -196,9 +197,9 @@ if name_table == "Данные по группам":
 
 
 # Действия
-actions = ["Добавить студента", "Удалить студента", "Добавить столбец"]
+actions = ["Добавить студента", "Удалить студента"]
 if name_table in list_subjects:
-    actions = ["Отфильтровать"] + actions
+    actions = ["Отфильтровать"] + actions + ["Добавить столбец"]
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
@@ -211,11 +212,11 @@ if action == "Добавить студента":
     if "checking" not in st.session_state:
         st.session_state.checking = False
     
-    if "Error:" not in func.check_text_input(name):
-        name = func.check_text_input(name)
+    if "Error:" not in func.check_fio_input(name):
+        name = func.check_fio_input(name)
         st.session_state.checking = True
     else:
-        st.sidebar.warning(func.check_text_input(name)[6:], icon = "❌")
+        st.sidebar.warning(func.check_fio_input(name)[6:], icon = "❌")
         st.session_state.checking = False
     
     if st.sidebar.button("Добавить студента") and st.session_state.checking:
@@ -248,11 +249,11 @@ if action == "Добавить столбец":
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
     if st.sidebar.button("Добавить столбец"):
         if type_column == "Для оценки":
-            for df_subject in subjects.values():
-                func.add_column(df_subject, title)
+            title = func.check_title_column_input(title)
+            func.add_column(subjects[name_table], title)
         else:
-            for df_subject in subjects.values():
-                func.add_column(df_subject, title, place="end")
+            title = func.check_title_column_input(title, type_column="other")
+            func.add_column(subjects[name_table], title, place="end")
         save_subjects(subjects)
         write_log(action, f"Название = {title}, Тип столбца = {type_column}") # log
         st.success(f"Столбец {title} успешно создан!", icon="✅")

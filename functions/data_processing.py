@@ -1,11 +1,11 @@
 import pandas as pd
 import numpy as np
 
-def int_non_error_nan(mean):
-    if pd.isna(mean):
-        return mean
+def int_non_error_nan(data):
+    if pd.isna(data):
+        return data
     else:
-        return int(mean)
+        return int(data)
 
 # Функция для подсчета среденей оценки
 def count_mean_mark(df, name_column = "Средняя оценка", output = "df"):

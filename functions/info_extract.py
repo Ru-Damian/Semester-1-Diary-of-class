@@ -1,15 +1,27 @@
 import pandas as pd
-from .data_processing import *
+import numpy as np
+from .data_processing import int_non_error_nan, count_mean_mark, filter_df_column, add_column
 
 # Функция для вывода всей информации о студенте по одному предмету или всем
 def info_student(subjects, id_student, name_subject = "all"):
+    columns_before_mean = list()
+    columns_after_mean = list()
+    for df_subject in subjects.values():
+        id_mean = df_subject.columns.get_loc("Средняя оценка")
+        for col in df_subject.columns[:id_mean]:
+            if col not in columns_before_mean:
+                columns_before_mean.append(col)
+        for col in df_subject.columns[id_mean + 1:]:
+            if col not in columns_after_mean:
+                columns_after_mean.append(col)
+    columns_order = columns_before_mean + ["Средняя оценка"] + columns_after_mean
     data_marks = list()
     for subject, df_subject in subjects.items():
         row = df_subject.loc[id_student]
         data_row = dict()
         data_row["Предмет"] = subject
-        for col in df_subject.columns:
-            data_row[col] = row[col]
+        for col in columns_order:
+            data_row[col] = row[col] if col in df_subject.columns else np.nan
         data_marks.append(data_row)
     df_marks = pd.DataFrame(data_marks).set_index("Предмет")
     df_student = pd.DataFrame({
