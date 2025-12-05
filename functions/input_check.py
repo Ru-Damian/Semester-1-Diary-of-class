@@ -17,9 +17,11 @@ def check_full_name_input(full_name:str):
     for word in words:
         for letter in word.upper():
             if letter not in correct_alf:
-                return f"Error:{word.capitalize()} содержит буквы не из русского языка / цифры / специальные символы"
+                return f"Error:{word} содержит буквы не из русского языка / цифры / специальные символы"
             if letter == "-" and (letter == word[0] or letter == word[-1]):
-                return "Error:\"-\" не может быть в начале или в конце слова"
+                return f"Error:{word} \"-\" не может быть в начале или в конце слова"
+            if "--" in word:
+                return f"Error:{word} не может быть несколько подряд идущих \"-\""
     full_name = words[0].capitalize()
     for i in range(1, len(words)):
         full_name += " " + words[i].capitalize()
@@ -51,6 +53,32 @@ def check_title_column_input(title_column, type_column = "mark"):
         title_column = title_column.capitalize()
     return title_column
 
+def check_name_subject_input(name_subject:str, list_subject:list[str]) -> str:
+    """
+    Проверяет name_subject на корректность ввода. Если есть проблемы, возвращает подсказку. Иначе возвращает изменный name_subject.
+    
+    :param name_subject: Название предмета, которое проверяем на корректность ввода
+    :type name_subject: str
+    :param list_subject: Список предметов, для исключения дублирования предметов
+    :type list_subject: list[str]
+    :return: Подсказка, если ввод некорректен | Изменный name_subject
+    :rtype: str
+    """
+    words = [word for word in name_subject.split(" ") if word != ""]
+    if not words:
+        return "Error:Пустое название предмета"
+    name_subject = words[0].capitalize()
+    if len(words) > 1:
+        for word in words[1:]: name_subject += f" {word.lower()}"
+    if name_subject in list_subject:
+        return "Error:Таблица для этого предмета уже существует"
+    correct_alf = ru_alf
+    for word in [_word for _word in name_subject.split(" ") if _word != ""]:
+        for letter in word.upper():
+            if letter not in correct_alf:
+                return f"Error:{word} содержит буквы не из русского языка / цифры / специальные символы"
+    return name_subject
+
 def check_text_input(text_input:str, type_text_input:str, type_column:None|str = None, list_subject:None|list[str] = None) -> str:
     """
     Вилка для вызова одной из функций проверки текстого ввода.
@@ -70,4 +98,6 @@ def check_text_input(text_input:str, type_text_input:str, type_column:None|str =
         result = check_full_name_input(text_input)
     if type_text_input == "title_column":
         result = check_title_column_input(text_input, type_column = type_column)
+    if type_text_input == "name_subject":
+        result = check_name_subject_input(text_input, list_subject)
     return result

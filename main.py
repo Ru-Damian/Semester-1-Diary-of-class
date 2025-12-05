@@ -132,15 +132,15 @@ def make_non_editable_column_config(df:pd.DataFrame, non_editable_columns:list[s
                 config[col] = st.column_config.TextColumn(col, max_chars=50)
     return config
 
-def edit_button(edit_key:any) -> None:
+def edit_button(flag_key:str) -> None:
     """
-    Создает кнопку, которая меняет st.session_state[edit_key] на True
+    Создает кнопку, которая меняет st.session_state[flag_key] на True
     
-    :param edit_key: Ключ к переменной, которая сохранена в st.session_state
-    :type edit_key: any
+    :param flag_key: Ключ к флагу, который сохранен в st.session_state
+    :type flag_key: str
     """
     if st.button("Редактировать"):
-        st.session_state[edit_key] = True
+        st.session_state[flag_key] = True
         write_log("Редактировать", f"Предмет = {name_table}") # log
         st.rerun()
 
@@ -236,6 +236,22 @@ def show_info_student_table() -> None: #subjects:dict[str, pd.Dataframe], id_stu
             st.warning("Студента с таким ID не существует", icon = "❌")
 
 def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_column:None|str = None, list_subject:None|list[str] = None) -> None|str:
+    """
+    Создает флаг в st.session_state. Выводит подсказку для исправления ввода | Возвращает изменный text_input.
+    
+    :param flag_key: Название флага, который будет создан в st.session_state
+    :type flag_key: str
+    :param text_input: Ввод, который нужно проверить через одну из функций
+    :type text_input: str
+    :param type_text_input: "full_name" -- для проверки ФИО | "title_column" -- для проверки названия столбца | "name_subject" -- для проверки названия предмета
+    :type type_text_input: str
+    :param type_column: "mark" | "other". Параметр необходимый для проверки названия нового столбца.
+    :type type_column: None | str
+    :param list_subject: Список предметов, для проверки названия нового предмета
+    :type list_subject: None | list[str]
+    :return: Подсказка, если ввод некорректен | Изменный text_input
+    :rtype: str | None
+    """
     if flag_key not in st.session_state:
         st.session_state[flag_key] = False
     if "Error:" not in func.check_text_input(text_input, type_text_input, type_column, list_subject):
@@ -320,7 +336,7 @@ if action == "Добавить студента":
 
 if action == "Удалить студента":
     st.sidebar.subheader("Удалить студента")
-    id_student = st.sidebar.number_input("ID студента", value = 1002, min_value=1001)
+    id_student = st.sidebar.number_input("ID студента", value = 1000, min_value=1000)
     if st.sidebar.button("Удалить студента"):
         try:
             name, group = func.remove_student(subjects, id_student)
@@ -339,15 +355,18 @@ if action == "Добавить столбец":
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
     title_column = check_text_input("checked_title_column", title_column, "title_column", type_column="mark" if type_column == "Для оценки" else "other")
     if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"]:
-        if type_column == "Для оценки":
-            func.add_column(subjects[name_table], title_column)
-        else:
-            func.add_column(subjects[name_table], title_column, place="end")
-        save_subjects(subjects)
-        write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
-        st.success(f"Столбец {title_column} успешно создан!", icon="✅")
-        time.sleep(1)
-        st.rerun()
+        try:
+            if type_column == "Для оценки":
+                func.add_column(subjects[name_table], title_column)
+            else:
+                func.add_column(subjects[name_table], title_column, place="end")
+            save_subjects(subjects)
+            write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
+            st.success(f"Столбец {title_column} успешно создан!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+        except ValueError:
+            st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
 
 if action == "Отфильтровать":
     st.sidebar.subheader("Параметры фильтра")
@@ -368,7 +387,8 @@ other = st.sidebar.selectbox(" ", (["Не выбрано", "Добавить п�
 
 if other == "Добавить предмет":
     name_subject = st.sidebar.text_input("Название предмета")
-    if st.sidebar.button("Добавить предмет"):
+    name_subject = check_text_input("checked_name_subject", name_subject, "name_subject", list_subject=list_subjects)
+    if st.sidebar.button("Добавить предмет") and st.session_state["checked_name_subject"]:
         with open("subjects.txt", "a", encoding="utf-8") as file:
             file.write(f"{name_subject}\n")
         subjects, list_subjects, list_groups = load_subjects()
