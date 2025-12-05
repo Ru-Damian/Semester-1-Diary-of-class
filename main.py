@@ -39,17 +39,18 @@ def write_students(id:int, name:str, group:int, action:str = "add") -> None:
         with open("students.txt", "w", encoding="utf-8") as file:
             file.writelines(students)
 
-def load_subjects() -> tuple[dict[str, pd.DataFrame], list[str], list[int]]:
+def load_subjects() -> tuple[dict[str, pd.DataFrame], list[str], list[int], bool]:
     """
     Выгружает список предметов из subjects.txt. Создает словарь {название предмета:pd.Dataframe}.
     pd.Dataframe создается из файла .csv, если такого нет используется func.create_df_subject(), а данные для нее берутся из "students.txt".
     
-    :return: Словарь {название предмета:таблица предмета}, массив с названием всех предметов, массив с номерами всех групп
-    :rtype: tuple[dict[str, pd.DataFrame], list[str], list[int]]
+    :return: Словарь {название предмета:таблица предмета}, массив с названием всех предметов, массив с номерами всех групп, флаг, который указывает создавались ли новые таблицы
+    :rtype: tuple[dict[str, pd.DataFrame], list[str], list[int], bool]
     """
     with open("subjects.txt", "r", encoding="utf-8") as file:
         list_subjects = [s.strip() for s in file]
     subjects = dict()
+    creating_subject = False
     for subject in list_subjects:
         try:
             subjects[subject] = pd.read_csv(f"{subject}.csv", encoding="utf-8", sep=',').set_index("ID")
@@ -67,9 +68,10 @@ def load_subjects() -> tuple[dict[str, pd.DataFrame], list[str], list[int]]:
                         list_students.append(fio)
                         list_groups.append(int(group))
                 subjects[subject] = func.create_df_subject(list_id, list_students, list_groups)
+            creating_subject = True
             write_log("Создать таблицу предмета", f"Предмет = {subject}") # log
     list_groups = sorted(set(subjects[list_subjects[0]]["Группа"].to_list()))
-    return subjects, list_subjects, list_groups
+    return subjects, list_subjects, list_groups, creating_subject
 
 def save_subjects(subjects:dict[str, pd.DataFrame]) -> None:
     """
@@ -233,7 +235,13 @@ def show_info_student_table() -> None: #subjects:dict[str, pd.Dataframe], id_stu
         except KeyError:
             st.warning("Студента с таким ID не существует", icon = "❌")
 
-subjects, list_subjects, list_groups = load_subjects()
+subjects, list_subjects, list_groups, creating_subject = load_subjects()
+
+# Если была создана новая таблица, обновляет страницу, чтобы не было ошибок
+if creating_subject:
+    save_subjects(subjects)
+    creating_subject = False
+    st.rerun()
 
 if "subjects" not in st.session_state:
     st.session_state.subjects = subjects
