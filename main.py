@@ -235,6 +235,17 @@ def show_info_student_table() -> None: #subjects:dict[str, pd.Dataframe], id_stu
         except KeyError:
             st.warning("Студента с таким ID не существует", icon = "❌")
 
+def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_column:None|str = None, list_subject:None|list[str] = None) -> None|str:
+    if flag_key not in st.session_state:
+        st.session_state[flag_key] = False
+    if "Error:" not in func.check_text_input(text_input, type_text_input, type_column, list_subject):
+        text_input = func.check_text_input(text_input, type_text_input, type_column, list_subject)
+        st.session_state[flag_key] = True
+        return text_input
+    else:
+        st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
+        st.session_state[flag_key] = False
+
 subjects, list_subjects, list_groups, creating_subject = load_subjects()
 
 # Если была создана новая таблица, обновляет страницу, чтобы не было ошибок
@@ -295,25 +306,15 @@ action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
 
 if action == "Добавить студента":
     st.sidebar.subheader("Добавить студента")
-    name = st.sidebar.text_input("ФИО студента", max_chars = 50, value = "Петров Иван Сергеевич", placeholder = "Петров Иван Сергеевич")
-    group = st.sidebar.number_input("Группа", value = 1, min_value = 1, max_value = 15)
-
-    if "checking" not in st.session_state:
-        st.session_state.checking = False
-    
-    if "Error:" not in func.check_fio_input(name):
-        name = func.check_fio_input(name)
-        st.session_state.checking = True
-    else:
-        st.sidebar.warning(func.check_fio_input(name)[6:], icon = "❌")
-        st.session_state.checking = False
-    
-    if st.sidebar.button("Добавить студента") and st.session_state.checking:
-        id_student = func.add_student(subjects, name, group)
+    full_name_student = st.sidebar.text_input("ФИО студента", max_chars = 50, value = "Петров Иван Сергеевич", placeholder = "Петров Иван Сергеевич")
+    group_student = st.sidebar.number_input("Группа", value = 1, min_value = 1, max_value = 15)
+    full_name_student = check_text_input("checked_full_name_student", full_name_student, "full_name")
+    if st.sidebar.button("Добавить студента") and st.session_state["checked_full_name_student"]:
+        id_student = func.add_student(subjects, full_name_student, group_student)
         save_subjects(subjects)
-        write_students(id_student, name, group)
-        write_log(action, f"ФИО = {name}, Группа = {group}") # log
-        st.success(f"Студент {name} ({group}) успешно добавлен!", icon="✅")
+        write_students(id_student, full_name_student, group_student)
+        write_log(action, f"ФИО = {full_name_student}, Группа = {group_student}") # log
+        st.success(f"Студент {full_name_student} ({group_student}) успешно добавлен!", icon="✅")
         time.sleep(1)
         st.rerun()
 
@@ -334,23 +335,19 @@ if action == "Удалить студента":
 
 if action == "Добавить столбец":
     st.sidebar.subheader("Добавить столбец")
-    title = st.sidebar.text_input("Название", max_chars = 20)
+    title_column = st.sidebar.text_input("Название", max_chars = 20)
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
-    if st.sidebar.button("Добавить столбец"):
-        try:
-            if type_column == "Для оценки":
-                title = func.check_title_column_input(title)
-                func.add_column(subjects[name_table], title)
-            else:
-                title = func.check_title_column_input(title, type_column="other")
-                func.add_column(subjects[name_table], title, place="end")
-            save_subjects(subjects)
-            write_log(action, f"Название = {title}, Тип столбца = {type_column}") # log
-            st.success(f"Столбец {title} успешно создан!", icon="✅")
-            time.sleep(1)
-            st.rerun()
-        except ValueError:
-            st.sidebar.warning("Заполните поле \"Название\"", icon = "❌")
+    title_column = check_text_input("checked_title_column", title_column, "title_column", type_column="mark" if type_column == "Для оценки" else "other")
+    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"]:
+        if type_column == "Для оценки":
+            func.add_column(subjects[name_table], title_column)
+        else:
+            func.add_column(subjects[name_table], title_column, place="end")
+        save_subjects(subjects)
+        write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
+        st.success(f"Столбец {title_column} успешно создан!", icon="✅")
+        time.sleep(1)
+        st.rerun()
 
 if action == "Отфильтровать":
     st.sidebar.subheader("Параметры фильтра")
