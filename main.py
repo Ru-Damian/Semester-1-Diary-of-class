@@ -262,6 +262,34 @@ def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_col
         st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
         st.session_state[flag_key] = False
 
+def add_column_by_target(target:str, type_column:str) -> None:
+    """
+    Добавляет столбец к одному предмету или ко всем.
+    
+    :param target: "one" -- добавляет столбец к одному предмету | "all" -- добавляет столбец ко всем предметам 
+    :type target: str
+    :param type_column: "mark" -- создает столбец для оценки перед "Средняя оценка" | "other" -- создает столбец в конце таблицы
+    :type type_column: str
+    """
+    if target == "one":
+        if type_column == "mark":
+            func.add_column(subjects[name_table], title_column)
+        elif type_column == "other":
+            func.add_column(subjects[name_table], title_column, place="end")
+    if target == "all":
+        if type_column == "mark":
+            for df_subject in subjects.values():
+                try:
+                    func.add_column(df_subject, title_column)
+                except ValueError:
+                    continue
+        elif type_column == "other":
+            for df_subject in subjects.values():
+                try:
+                    func.add_column(df_subject, title_column, place="end")
+                except ValueError:
+                    continue
+
 subjects, list_subjects, list_groups, creating_subject = load_subjects()
 
 # Если была создана новая таблица, обновляет страницу, чтобы не было ошибок
@@ -316,6 +344,8 @@ if name_table == "Данные по группам":
 actions = ["Добавить студента", "Удалить студента"]
 if name_table in list_subjects:
     actions = ["Отфильтровать", "Добавить столбец"] + actions
+elif name_table == "Все предметы":
+    actions = ["Добавить столбец"] + actions
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
@@ -351,15 +381,19 @@ if action == "Удалить студента":
 
 if action == "Добавить столбец":
     st.sidebar.subheader("Добавить столбец")
+    if name_table == "Все предметы":
+        st.sidebar.write("(ко всем предметам)")
+        target = "all"
+    else:
+        st.sidebar.write(f"(к таблице \"{name_table}\")")
+        target = "one"
     title_column = st.sidebar.text_input("Название", max_chars = 20)
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
-    title_column = check_text_input("checked_title_column", title_column, "title_column", type_column="mark" if type_column == "Для оценки" else "other")
+    type_column = "mark" if type_column == "Для оценки" else "other"
+    title_column = check_text_input("checked_title_column", title_column, "title_column", type_column=type_column)
     if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"]:
         try:
-            if type_column == "Для оценки":
-                func.add_column(subjects[name_table], title_column)
-            else:
-                func.add_column(subjects[name_table], title_column, place="end")
+            add_column_by_target(target, type_column)
             save_subjects(subjects)
             write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
             st.success(f"Столбец {title_column} успешно создан!", icon="✅")
