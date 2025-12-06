@@ -262,7 +262,7 @@ def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_col
         st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
         st.session_state[flag_key] = False
 
-def add_column_by_target(target:str, type_column:str) -> None:
+def add_column_by_target(target:str, type_column:str) -> bool:
     """
     Добавляет столбец к одному предмету или ко всем.
     
@@ -270,25 +270,28 @@ def add_column_by_target(target:str, type_column:str) -> None:
     :type target: str
     :param type_column: "mark" -- создает столбец для оценки перед "Средняя оценка" | "other" -- создает столбец в конце таблицы
     :type type_column: str
+    :return: True, если был(и) создан(ы) столбцы | False, если столбец с таким названием уже существует(в конкретной таблице | во всех таблицах)
+    :rtype: bool
     """
+    place = "before" if type_column == "mark" else "end"
     if target == "one":
-        if type_column == "mark":
-            func.add_column(subjects[name_table], title_column)
-        elif type_column == "other":
-            func.add_column(subjects[name_table], title_column, place="end")
+        if title_column not in subjects[name_table].columns:
+            func.add_column(subjects[name_table], title_column, place=place)
+        else:
+            st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
+            return False
     if target == "all":
-        if type_column == "mark":
-            for df_subject in subjects.values():
-                try:
-                    func.add_column(df_subject, title_column)
-                except ValueError:
-                    continue
-        elif type_column == "other":
-            for df_subject in subjects.values():
-                try:
-                    func.add_column(df_subject, title_column, place="end")
-                except ValueError:
-                    continue
+        cnt_subjects = len(subjects)
+        cnt_is = 0
+        for df_subject in subjects.values():
+            if title_column not in df_subject.columns:
+                func.add_column(df_subject, title_column, place=place)
+            else:
+                cnt_is += 1
+                if cnt_is == cnt_subjects:
+                    st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
+                    return False
+    return True
 
 subjects, list_subjects, list_groups, creating_subject = load_subjects()
 
@@ -391,16 +394,12 @@ if action == "Добавить столбец":
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
     type_column = "mark" if type_column == "Для оценки" else "other"
     title_column = check_text_input("checked_title_column", title_column, "title_column", type_column=type_column)
-    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"]:
-        try:
-            add_column_by_target(target, type_column)
-            save_subjects(subjects)
-            write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
-            st.success(f"Столбец {title_column} успешно создан!", icon="✅")
-            time.sleep(1)
-            st.rerun()
-        except ValueError:
-            st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
+    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"] and add_column_by_target(target, type_column):
+        save_subjects(subjects)
+        write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
+        st.success(f"Столбец {title_column} успешно создан!", icon="✅")
+        time.sleep(1)
+        st.rerun()
 
 if action == "Отфильтровать":
     st.sidebar.subheader("Параметры фильтра")
@@ -425,7 +424,7 @@ if other == "Добавить предмет":
     if st.sidebar.button("Добавить предмет") and st.session_state["checked_name_subject"]:
         with open("subjects.txt", "a", encoding="utf-8") as file:
             file.write(f"{name_subject}\n")
-        subjects, list_subjects, list_groups = load_subjects()
+        subjects, list_subjects, list_groups, creating_subject = load_subjects()
         save_subjects(subjects)
         st.session_state.subjects = subjects
         write_log("Добавить новый предмет", f"Предмет = {name_subject}") # log
