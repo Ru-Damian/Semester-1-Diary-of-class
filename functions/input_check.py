@@ -1,6 +1,4 @@
-nums = "0123456789"
-ru_alf = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-special_symbs = "-"
+import re
 
 def check_full_name_input(full_name:str):
     """
@@ -8,23 +6,21 @@ def check_full_name_input(full_name:str):
     Если full_name соответствует требованиям, то возращает full_name, где каждое слово начинает с заглавной буквы, а все остальные -- строчные.
     Если есть ошибки, то возвращает подсказка, как исправить full_name.
     """
-    words = [word for word in full_name.split(" ") if word != ""]
+    words = ["-".join(subword.capitalize() for subword in word.split("-")) for word in full_name.strip().split(" ") if word != ""]
     if len(words) < 2:
         return "Error:Минимум 2 слова"
     if len(words) > 3:
         return "Error:Максимум 3 слова, можно соединить слова с помощью \"-\""
-    correct_alf = ru_alf + special_symbs
+    word_pattern = r"[а-яё]+(\-[а-яё]+)*"
     for word in words:
-        for letter in word.upper():
-            if letter not in correct_alf:
-                return f"Error:{word} содержит буквы не из русского языка / цифры / специальные символы"
-            if letter == "-" and (letter == word[0] or letter == word[-1]):
-                return f"Error:{word} \"-\" не может быть в начале или в конце слова"
-            if "--" in word:
-                return f"Error:{word} не может быть несколько подряд идущих \"-\""
-    full_name = words[0].capitalize()
-    for i in range(1, len(words)):
-        full_name += " " + words[i].capitalize()
+        if not re.fullmatch(rf"^{word_pattern}$", word, re.IGNORECASE):
+            if re.search(r'--', word):
+                return f"Error:\"{word}\" не может быть несколько подряд идущих \"-\""
+            elif re.fullmatch(rf"^-{word_pattern}$|^{word_pattern}-$|^-{word_pattern}-$", word, re.IGNORECASE):
+                return f"Error:\"{word}\": \"-\" не может быть в начале или в конце слова"
+            else:
+                return f"Error:\"{word}\" содержит буквы не из русского языка / цифры / специальные символы"
+    full_name = " ".join(words)
     return full_name
 
 def check_title_column_input(title_column, type_column = "mark"):
@@ -35,18 +31,21 @@ def check_title_column_input(title_column, type_column = "mark"):
     Возвращает подсказки, если что-то введено неправильно.
     Инача возвращает измененное title_column, где первое слово начинается с заглавной буквы.
     """
-    if title_column == "" or (len(set(title_column)) == 1 and title_column[0] == " "):
+    words = [word.lower() for word in title_column.strip().split(" ") if word != ""]
+    if not words:
         return "Error:Пустое название столбца"
-    correct_alf = ru_alf + nums
-    for word in [_word for _word in title_column.split(" ") if _word != ""]:
-        for symb in word.upper():
-            if symb not in correct_alf:
-                return f"Error:{word} содержит буквы не из русского языка / специальные символы"
-    title_column = title_column.upper().replace("ОЦЕНКА", "")
-    if title_column == "" or (len(set(title_column)) == 1 and title_column[0] == " "):
-        return "Error:У вас пустое название, так как сочетание букв \"Оценка\" не может использоваться в название столбца (к столбцу с оценкой, автоматически добавится \"Оценка\")"
-    while title_column[0] == " ":
-        title_column = title_column.upper().replace(" ", "", 1)
+    title_column = " ".join(words).replace("оценка", "").capitalize()
+    if title_column == "":
+        return "Error:У вас пустое название, так как сочетание букв \"Оценка\" не может использоваться в название столбца (к столбцу для оценки, автоматически добавится \"Оценка\")"
+    word_pattern = r"[а-яё]+"
+    num_pattern = r"[0-9]+"
+    mixed_pattern = r"[а-яё0-9]+"
+    for word in words:
+        if not re.fullmatch(rf"^{word_pattern}$|^{num_pattern}$", word, re.IGNORECASE):
+            if re.fullmatch(rf"^{mixed_pattern}$", word, re.IGNORECASE):
+                return f"Error:В \"{word}\" смешены цифры и буквы(разделите их или что-то уберите)"
+            else:
+                return f"Error:\"{word}\" содержит буквы не из русского языка / специальные символы"
     if type_column == "mark":
         title_column = "Оценка " + title_column.lower()
     if type_column == "other":
@@ -64,19 +63,16 @@ def check_name_subject_input(name_subject:str, list_subject:list[str]) -> str:
     :return: Подсказка, если ввод некорректен | Изменный name_subject
     :rtype: str
     """
-    words = [word for word in name_subject.split(" ") if word != ""]
+    words = [word.lower() for word in name_subject.strip().split(" ") if word != ""]
     if not words:
         return "Error:Пустое название предмета"
-    name_subject = words[0].capitalize()
-    if len(words) > 1:
-        for word in words[1:]: name_subject += f" {word.lower()}"
+    name_subject = " ".join(words).capitalize()
     if name_subject in list_subject:
         return "Error:Таблица для этого предмета уже существует"
-    correct_alf = ru_alf
-    for word in [_word for _word in name_subject.split(" ") if _word != ""]:
-        for letter in word.upper():
-            if letter not in correct_alf:
-                return f"Error:{word} содержит буквы не из русского языка / цифры / специальные символы"
+    word_pattern = r"[а-яё]+"
+    for word in words:
+        if not re.fullmatch(rf"^{word_pattern}$", word, re.IGNORECASE):
+            return f"Error:\"{word}\" содержит буквы не из русского языка / цифры / специальные символы"
     return name_subject
 
 def check_text_input(text_input:str, type_text_input:str, type_column:None|str = None, list_subject:None|list[str] = None) -> str:
