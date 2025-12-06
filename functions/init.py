@@ -1,4 +1,4 @@
 from .data_processing import count_mean_mark, create_df_subject, filter_df_column, add_column, replace_value
 from .student_operations import add_student, remove_student
 from .info_extract import info_student, info_subjects, info_groups
-from .input_check import check_text_input
+from .input_check import default_processing_text_input, check_text_input

@@ -1,12 +1,23 @@
 import re
 
+def default_processing_text_input(text_input:str, is_full_name:bool = False, output:str = "words") -> list[str]|str:
+    if is_full_name:
+        if output == "words":
+            return ["-".join(subword.capitalize() for subword in word.split("-")) for word in text_input.strip().split(" ") if word != ""]
+        if output == "text_input":
+            return " ".join(["-".join(subword.capitalize() for subword in word.split("-")) for word in text_input.strip().split(" ") if word != ""])
+    if output == "words":
+        return [word.lower() for word in text_input.strip().split(" ") if word != ""]
+    if output == "text_input":
+        return " ".join([word.lower() for word in text_input.strip().split(" ") if word != ""])
+
 def check_full_name_input(full_name:str):
     """
     Проверка ввода full_name на соответсвие требованиям: кол-во слов, символы из correct_alf.
     Если full_name соответствует требованиям, то возращает full_name, где каждое слово начинает с заглавной буквы, а все остальные -- строчные.
     Если есть ошибки, то возвращает подсказка, как исправить full_name.
     """
-    words = ["-".join(subword.capitalize() for subword in word.split("-")) for word in full_name.strip().split(" ") if word != ""]
+    words = default_processing_text_input(full_name, is_full_name = True)
     if len(words) < 2:
         return "Error:Минимум 2 слова"
     if len(words) > 3:
@@ -31,7 +42,7 @@ def check_title_column_input(title_column, type_column = "mark"):
     Возвращает подсказки, если что-то введено неправильно.
     Инача возвращает измененное title_column, где первое слово начинается с заглавной буквы.
     """
-    words = [word.lower() for word in title_column.strip().split(" ") if word != ""]
+    words = default_processing_text_input(title_column)
     if not words:
         return "Error:Пустое название столбца"
     title_column = " ".join(words).replace("оценка", "").capitalize()
@@ -63,7 +74,7 @@ def check_name_subject_input(name_subject:str, list_subject:list[str]) -> str:
     :return: Подсказка, если ввод некорректен | Изменный name_subject
     :rtype: str
     """
-    words = [word.lower() for word in name_subject.strip().split(" ") if word != ""]
+    words = default_processing_text_input(name_subject)
     if not words:
         return "Error:Пустое название предмета"
     name_subject = " ".join(words).capitalize()

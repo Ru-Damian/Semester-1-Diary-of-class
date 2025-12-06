@@ -46,7 +46,7 @@ def write_changes_students(id, df_student):
     :param id: ID студента, чьи ФИО и/или группа изменились
     :param df_student: Description
     """
-    name = df_student["Студент"].iloc[0]
+    name = func.default_processing_text_input(df_student["Студент"].iloc[0], is_full_name=True, output="text_input")
     group = df_student["Группа"].iloc[0]
     with open("students.txt", "r", encoding="utf-8") as file:
         students = [f"{id};{name};{group}\n" if line.split(";")[0] == str(id) else line for line in file.readlines()]
@@ -109,7 +109,7 @@ def save_info_student(id:int, df_student:pd.DataFrame, df_marks:pd.DataFrame) ->
     :type df_marks: pd.DataFrame
     """
     for subject, df_subject in subjects.items():
-        df_subject.loc[id, "Студент"] = df_student["Студент"].iloc[0]
+        df_subject.loc[id, "Студент"] = func.default_processing_text_input(df_student["Студент"].iloc[0], is_full_name=True, output="text_input")
         df_subject.loc[id, "Группа"] = df_student["Группа"].iloc[0]
         new_marks_row = df_marks.loc[subject, df_subject.columns[2:]]
         df_subject.loc[id, df_subject.columns[2]:] = new_marks_row
@@ -230,10 +230,13 @@ def show_edited_info_student_table(subjects:dict[str, pd.Dataframe], id_student:
     :type id_student: int
     """
     df_student, df_marks = func.info_student(subjects, id_student)
-    st.write(name_table)
+    st.write("Данные студента")
     config_edited_df_student = make_non_editable_column_config(df_student, ["Средний балл", "Посещаемость"])
+    config_edited_df_student["Студент"] = st.column_config.TextColumn(
+        "Студент", max_chars=50, validate=r"^\s*[А-ЯЁа-яё]+(?:-[А-ЯЁа-яё]+)*(?:\s+[А-ЯЁа-яё]+(?:-[А-ЯЁа-яё]+)*){1,2}\s*$",
+        help="ФИО студента: минимум 2 слова; максимум 3 слова(можно соединять с помощью \"-\"); символы русского алфавита и \"-\"; \"-\" не должен стоять в начале или в конце слова"
+        )
     config_edited_df_student["Группа"] = st.column_config.NumberColumn("Группа", min_value=1, max_value=15)
-    # Нужно ограничение на ввод ФИО, делать буду скорее всего через регулярные выражения, которые вставляются в validate в st.column_config.TextColumn.
     edited_df_student = st.data_editor(df_student, num_rows="fixed", column_config=config_edited_df_student)
     st.write("Оценки по предметам")
     config_edited_df_marks = make_non_editable_column_config(df_marks, ["Средняя оценка"], index="Предмет")
@@ -244,7 +247,6 @@ def show_edited_info_student_table(subjects:dict[str, pd.Dataframe], id_student:
         save_info_student(id_student, edited_df_student, edited_df_marks)
         write_changes_students(id_student, edited_df_student)
         st.session_state.editing_student = False
-        write_log("Сохранить", f"Предмет = {name_table}") # log
         st.success("Изменения сохранены!", icon="✅")
         time.sleep(1)
         st.rerun()
