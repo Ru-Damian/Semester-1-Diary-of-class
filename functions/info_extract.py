@@ -2,8 +2,21 @@ import pandas as pd
 import numpy as np
 from .data_processing import int_non_error_nan, count_mean_mark, filter_df_column, add_column
 
-# Функция для вывода всей информации о студенте по одному предмету или всем
-def info_student(subjects, id_student, name_subject = "all"):
+def info_student(subjects:dict[str, pd.DataFrame], id_student:int, name_subject:str = "all") -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Из всех таблиц предметов собирает две таблицы с информацией о студенте.
+    df_student: ID, ФИО, Группа, Средний балл(средняя средних оценок), Средняя посещаемость.
+    df_marks: Предмет, соответствующие предмету столбцы с соответствующими студенту оценками.
+    
+    :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
+    :type subjects: dict[str, pd.DataFrame]
+    :param id_student: ID студента, информацию о котором нужно собрать в таблицы
+    :type id_student: int
+    :param name_subject: "all" -- в df_marks оценки по всем предметам | Название предмета -- в df_marks оценки только по этому предмету
+    :type name_subject: str
+    :return: df_student -- общая информация о студенте, df_marks -- оценки студента по конкретному предмету или по всем предметам
+    :rtype: tuple[DataFrame, DataFrame]
+    """
     columns_before_mean = list()
     columns_after_mean = list()
     for df_subject in subjects.values():
@@ -36,8 +49,15 @@ def info_student(subjects, id_student, name_subject = "all"):
         return df_student, df_marks
     return df_student, pd.DataFrame(df_marks.loc[name_subject]).T
 
-# Функция для вывода средних оценок по всем предметам
-def info_subjects(subjects):
+def info_subjects(subjects:dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    Из всех таблиц предметов собирает таблицу со средними оценками всех студентов по каждому предмету.
+    
+    :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
+    :type subjects: dict[str, pd.DataFrame]
+    :return: Таблица со средними оценками всех студентов по каждому предмету
+    :rtype: DataFrame
+    """
     data_subjects = dict()
     data_attendance = list()
     cnt = 0
@@ -56,8 +76,17 @@ def info_subjects(subjects):
     df_subjects = count_mean_mark(df_subjects, name_column="Средний балл")
     return df_subjects
 
-# Функция для вывода средних оценок по всем предметам по группам
-def info_groups(subjects, list_groups):
+def info_groups(subjects:dict[str, pd.DataFrame], list_groups:list[int]) -> pd.DataFrame:
+    """
+    Из всех таблиц предметов собирает таблицу со средними оценками групп по каждому предмету.
+    
+    :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
+    :type subjects: dict[str, pd.DataFrame]
+    :param list_groups: Массив со всеми уникальными номерами групп
+    :type list_groups: list[int]
+    :return: Таблица со средними оценками групп по каждому предмету
+    :rtype: DataFrame
+    """
     data_groups = dict()
     data_groups["Группа"] = list_groups
     data_attendance = list()

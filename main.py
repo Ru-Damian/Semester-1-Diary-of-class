@@ -167,7 +167,14 @@ def show_filtered_subject_table() -> None:
     Отображает отфильтрованный pd.dataframe и создает кнопку, чтобы вернуть исходный pd.dataframe.
     """
     filtered_df_subject = st.session_state.filtered_df_subject
+    filtered_cnt_row = st.session_state.filtered_cnt_row
+    word_ending = "ов"
+    if str(filtered_cnt_row)[-1] in ("2", "3", "4"):
+        word_ending = "а"
+    elif str(filtered_cnt_row)[-1] == "1":
+        word_ending = ""
     st.dataframe(filtered_df_subject)
+    st.write(f"Подходит {filtered_cnt_row} студент{word_ending}")
     if st.button("Сбросить"):
         st.session_state.filtering_subject = False
         st.rerun()
@@ -304,21 +311,27 @@ def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_col
         st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
         st.session_state[flag_key] = False
 
-def add_column_by_target(target:str, type_column:str) -> bool:
+def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_column:str, type_column:None|str = None, subject:None|str = None) -> bool:
     """
     Добавляет столбец к одному предмету или ко всем.
     
+    :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
+    :type subjects: dict[str, pd.Dataframe]
     :param target: "one" -- добавляет столбец к одному предмету | "all" -- добавляет столбец ко всем предметам 
     :type target: str
-    :param type_column: "mark" -- создает столбец для оценки перед "Средняя оценка" | "other" -- создает столбец в конце таблицы
+    :param title_column: Название нового столбца
+    :type title_column: str
+    :param type_column: "mark" -- создает столбец для оценки перед "Средняя оценка" | None -- создает столбец в конце таблицы
     :type type_column: str
+    :param subject: None при target = "all" | Название предмета при target = "one"
+    :type subject: None|str
     :return: True, если был(и) создан(ы) столбцы | False, если столбец с таким названием уже существует(в конкретной таблице | во всех таблицах)
     :rtype: bool
     """
     place = "before" if type_column == "mark" else "end"
     if target == "one":
-        if title_column not in subjects[name_table].columns:
-            func.add_column(subjects[name_table], title_column, place=place)
+        if title_column not in subjects[subject].columns:
+            func.add_column(subjects[subject], title_column, place=place)
         else:
             st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
             return False
@@ -427,14 +440,16 @@ if action == "Добавить столбец":
     if name_table in list_subjects:
         st.sidebar.write(f"(к таблице \"{name_table}\")")
         target = "one"
+        subject = name_table
     else:
         st.sidebar.write("(ко всем предметам)")
         target = "all"
+        subject = None
     title_column = st.sidebar.text_input("Название", max_chars = 20)
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
-    type_column = "mark" if type_column == "Для оценки" else "other"
+    type_column = "mark" if type_column == "Для оценки" else None
     title_column = check_text_input("checked_title_column", title_column, "title_column", type_column=type_column)
-    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"] and add_column_by_target(target, type_column):
+    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"] and add_column_by_target(subjects, target, title_column, type_column=type_column, subject=subject):
         save_subjects(subjects)
         write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
         st.success(f"Столбец {title_column} успешно создан!", icon="✅")
@@ -451,6 +466,7 @@ if action == "Отфильтровать":
         filtered_df_subject, filtered_cnt_row = func.filter_df_column(subjects[name_table], column_filter, x_filter, low = low_filter)
         st.session_state.filtering_subject = True
         st.session_state.filtered_df_subject = filtered_df_subject
+        st.session_state.filtered_cnt_row = filtered_cnt_row
         st.rerun()
 
 

@@ -1,6 +1,18 @@
 import re
 
 def default_processing_text_input(text_input:str, is_full_name:bool = False, output:str = "words") -> list[str]|str:
+    """
+    Убирает лишние пробелы, меняет регистр букв взависимости от значения is_full_name.
+    
+    :param text_input: Ввод, который нужно обработать
+    :type text_input: str
+    :param is_full_name: True -- каждое слово(после дефиса тоже) начинается с заглавной буквы | False -- все буквы строчные
+    :type is_full_name: bool
+    :param output: "words" -- возвращает массив обработанных слов | "text_input" -- возвращает строку слов, соединенных через пробел
+    :type output: str
+    :return: Массив обработанных слов | строку слов, соединенных через пробел
+    :rtype: list[str] | str
+    """
     if is_full_name:
         if output == "words":
             return ["-".join(subword.capitalize() for subword in word.split("-")) for word in text_input.strip().split(" ") if word != ""]
@@ -11,11 +23,14 @@ def default_processing_text_input(text_input:str, is_full_name:bool = False, out
     if output == "text_input":
         return " ".join([word.lower() for word in text_input.strip().split(" ") if word != ""])
 
-def check_full_name_input(full_name:str):
+def check_full_name_input(full_name:str) -> str:
     """
-    Проверка ввода full_name на соответсвие требованиям: кол-во слов, символы из correct_alf.
-    Если full_name соответствует требованиям, то возращает full_name, где каждое слово начинает с заглавной буквы, а все остальные -- строчные.
-    Если есть ошибки, то возвращает подсказка, как исправить full_name.
+    Проверка ввода full_name на соответсвие требованиям: кол-во слов, символы русского алфавита и "-", расположение дефиса.
+    
+    :param full_name: Ввод, который нужно проверить
+    :type full_name: str
+    :return: Подсказка, если ввод некорректен | Изменный full_name
+    :rtype: str
     """
     words = default_processing_text_input(full_name, is_full_name = True)
     if len(words) < 2:
@@ -34,13 +49,19 @@ def check_full_name_input(full_name:str):
     full_name = " ".join(words)
     return full_name
 
-def check_title_column_input(title_column, type_column = "mark"):
+def check_title_column_input(title_column:str, type_column:None|str = None) -> str:
     """
-    Проверка ввода title_column.
-    Убирает все вхождения "Оценка" и все пробелы в начале названия.
-    Если type_column = "mark" в начало названия столбца ставится "Оценка ".
+    Проверка ввода title_column. Убирает все вхождения "Оценка".
+    Если type_column = .
     Возвращает подсказки, если что-то введено неправильно.
     Инача возвращает измененное title_column, где первое слово начинается с заглавной буквы.
+    
+    :param title_column: Ввод, который нужно проверить
+    :type title_column: str
+    :param type_column: None | "mark" -- в начало названия столбца ставится "Оценка "
+    :type type_column: str
+    :return: Подсказка, если ввод некорректен | Изменный title_column
+    :rtype: str
     """
     words = default_processing_text_input(title_column)
     if not words:
@@ -59,8 +80,6 @@ def check_title_column_input(title_column, type_column = "mark"):
                 return f"Error:\"{word}\" содержит буквы не из русского языка / специальные символы"
     if type_column == "mark":
         title_column = "Оценка " + title_column.lower()
-    if type_column == "other":
-        title_column = title_column.capitalize()
     return title_column
 
 def check_name_subject_input(name_subject:str, list_subject:list[str]) -> str:
