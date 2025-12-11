@@ -1,8 +1,9 @@
 import pandas as pd
-import numpy as np
+import matplotlib.pyplot as plt
 import streamlit as st
 import functions.init as func
 import time
+import io
 
 def write_log(action:str, info:str) -> None:
     """
@@ -14,7 +15,7 @@ def write_log(action:str, info:str) -> None:
     :type info: str
     """
     with open("logs.log", "a", encoding="utf-8") as file:
-        file.write(f"{time.strftime('[%Y-%m-%d %H:%M:%S]')} {action}: {info}\n")
+        file.write(f"{time.strftime('[%d-%m-%Y %H:%M:%S]')} {action}: {info}\n")
 
 def write_students(id:int, name:str, group:int, action:str = "add") -> None:
     """
@@ -396,6 +397,50 @@ if name_table == "Данные по группам":
     df_groups = func.info_groups(subjects, list_groups)
     st.dataframe(df_groups)
     st.download_button("Скачать", df_groups.to_csv().encode("utf-8"), f"{name_table}.csv")
+    for i in range(3): st.write(" ")
+    # Графики средних баллов по предмету по группам
+    st.write("Средний балл по предмету по группам")
+    name_graph_group_mean = st.radio(" ", ["Все предметы"] + list_subjects, horizontal=True)
+    fig, ax = plt.subplots(figsize=(8, 3))
+    if name_graph_group_mean != "Все предметы":
+        df_groups[name_graph_group_mean].plot.bar(ax=ax, color = "salmon")
+        ax.set_title(f"Средний балл по предмету: {name_graph_group_mean}")
+    else:
+        df_groups["Средний балл"].plot.bar(ax=ax, color = "salmon")
+        ax.set_title(f"Средний балл по всем предметам")
+    ax.set_xlabel("Группы")
+    ax.set_ylabel("Средний балл")
+    ax.grid(axis='y', linestyle='-.', alpha=0.7)
+    fig.tight_layout()
+    st.pyplot(fig, width=1000)
+    buf_graph_group_mean = io.BytesIO()
+    fig.savefig(buf_graph_group_mean, format="png", bbox_inches="tight")
+    buf_graph_group_mean.seek(0)
+    st.download_button("Скачать график", buf_graph_group_mean, f"Группа. Средние баллы. Предмет - {name_graph_group_mean}.png")
+    plt.close(fig)
+    for i in range(3): st.write(" ")
+    # Графики сложности предметов для групп
+    st.write(f"Сложность предметов по группам")
+    name_graph_group_difficulty = st.radio(" ", ["Все группы"] + list(map(str, list_groups)), horizontal=True)
+    fig, ax = plt.subplots(figsize=(8, 4))
+    if name_graph_group_difficulty != "Все группы":
+        df_groups.loc[int(name_graph_group_difficulty), :list_subjects[-1]].plot(ax=ax, marker = "o", color = "turquoise")
+        ax.set_title(f"Средний балл предметов для группы {name_graph_group_difficulty}")
+    else:
+        df_groups.iloc[:, :-2].mean(axis=0).plot(ax=ax, marker = "o", color = "turquoise")
+        ax.set_title(f"Средний балл по всем группам")
+    ax.set_xlabel("Предметы")
+    ax.set_ylabel("Средний балл")
+    ax.grid(axis='y', linestyle='-.', alpha=0.7)
+    ax.set_xticks(range(len(list_subjects)))
+    ax.set_xticklabels(list_subjects, rotation=45, ha="right")
+    fig.tight_layout()
+    st.pyplot(fig, width=1000)
+    buf_graph_group_difficulty = io.BytesIO()
+    fig.savefig(buf_graph_group_difficulty, format="png", bbox_inches="tight")
+    buf_graph_group_difficulty.seek(0)
+    st.download_button("Скачать график", buf_graph_group_difficulty, f"Группа. Сложность предметов. Группа - {name_graph_group_difficulty}.png")
+    plt.close(fig)
 
 
 # Действия
@@ -490,9 +535,10 @@ if other == "Добавить предмет":
 
 if other == "Посмотреть логи":
     with open("logs.log", "r", encoding="utf-8") as file:
-        logs = file.readlines()
+        logs = file.readlines()[::-1]
     if st.sidebar.button("Посмотреть логи"):
         st.header("История логов")
+        st.download_button("Скачать логи", "".join(logs[::-1]), "logs.log")
         for log in logs:
             st.write(log)
 

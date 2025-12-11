@@ -40,7 +40,9 @@ def check_full_name_input(full_name:str) -> str:
     word_pattern = r"[а-яё]+(\-[а-яё]+)*"
     for word in words:
         if not re.fullmatch(rf"^{word_pattern}$", word, re.IGNORECASE):
-            if re.search(r'--', word):
+            if set(word)[0] == "-":
+                return f"Error:\"-\" не может использоваться отдельно от слова"
+            elif re.search(r'--', word):
                 return f"Error:\"{word}\" не может быть несколько подряд идущих \"-\""
             elif re.fullmatch(rf"^-{word_pattern}$|^{word_pattern}-$|^-{word_pattern}-$", word, re.IGNORECASE):
                 return f"Error:\"{word}\": \"-\" не может быть в начале или в конце слова"
@@ -66,9 +68,14 @@ def check_title_column_input(title_column:str, type_column:None|str = None) -> s
     words = default_processing_text_input(title_column)
     if not words:
         return "Error:Пустое название столбца"
-    title_column = " ".join(words).replace("оценка", "").capitalize()
+    title_column = " ".join(words).replace("оценка", "")
     if title_column == "":
         return "Error:У вас пустое название, так как сочетание букв \"Оценка\" не может использоваться в название столбца (к столбцу для оценки, автоматически добавится \"Оценка\")"
+    title_column = title_column.replace("средняя", "")
+    title_column = title_column.replace("студент", "")
+    title_column = title_column.replace("группа", "")
+    if title_column == "":
+        return "Error:У вас пустое название, так как сочетание букв \"Студент\", \"Группа\", \"Средняя\" не может использоваться в название столбца"
     word_pattern = r"[а-яё]+"
     num_pattern = r"[0-9]+"
     mixed_pattern = r"[а-яё0-9]+"
@@ -79,8 +86,8 @@ def check_title_column_input(title_column:str, type_column:None|str = None) -> s
             else:
                 return f"Error:\"{word}\" содержит буквы не из русского языка / специальные символы"
     if type_column == "mark":
-        title_column = "Оценка " + title_column.lower()
-    return title_column
+        title_column = "Оценка " + title_column
+    return title_column.capitalize()
 
 def check_name_subject_input(name_subject:str, list_subject:list[str]) -> str:
     """

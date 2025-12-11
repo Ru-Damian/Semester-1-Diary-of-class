@@ -96,7 +96,7 @@ def info_groups(subjects:dict[str, pd.DataFrame], list_groups:list[int]) -> pd.D
         data_subject = list()
         data_subject_attendance = list()
         for group in data_groups["Группа"]:
-            df_group = filter_df_column(df_subject, "Группа", group, type_f = "value")[0]
+            df_group = filter_df_column(df_subject, "Группа", group, type_filter = "value")[0]
             data_subject.append(int_non_error_nan(df_group["Средняя оценка"].mean()))
             data_subject_attendance.append(int_non_error_nan(df_group["Посещаемость"].mean()))
         data_groups[subject] = data_subject
