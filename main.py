@@ -226,7 +226,7 @@ def show_subject_table(subjects:dict[str, pd.Dataframe], subject:str) -> None:
     else:
         st.dataframe(subjects[subject])
         edit_button("editing_subject")
-        st.download_button("Скачать", subjects[subject].to_csv().encode("utf-8"), f"{subject}.csv")
+        st.download_button("Скачать таблицу", subjects[subject].to_csv().encode("utf-8"), f"{subject}.csv")
 
 def show_edited_info_student_table(subjects:dict[str, pd.Dataframe], id_student:int) -> None:
     """
@@ -285,6 +285,29 @@ def show_info_student_table(subjects:dict[str, pd.Dataframe], id_student:int) ->
         except KeyError:
             st.warning("Студента с таким ID не существует", icon = "❌")
 
+def column_nums_division(col:pd.Series) -> dict[str, int]:
+    """
+    Создает словарь с распределением чисел из col по пяти диапозонам
+    
+    :param col: Столбец с цифрами, для которого нужно сделать словарь с распределением
+    :type col: pd.Series
+    :return: Словарь {Диапозон:кол-во строк}
+    :rtype: dict[str, int]
+    """
+    division = {"0-20":0, "21-40":0, "41-60":0, "61-80":0, "81-100":0}
+    for num in col:
+        if num < 21:
+            division["0-20"] += 1
+        elif num < 41:
+            division["21-40"] += 1
+        elif num < 61:
+            division["41-60"] += 1
+        elif num < 81:
+            division["61-80"] += 1
+        else:
+            division["81-100"] += 1
+    return division
+
 def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_column:None|str = None, list_subject:None|list[str] = None) -> None|str:
     """
     Создает флаг в st.session_state. Выводит подсказку для исправления ввода | Возвращает изменный text_input.
@@ -312,7 +335,7 @@ def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_col
         st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
         st.session_state[flag_key] = False
 
-def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_column:str, type_column:None|str = None, subject:None|str = None) -> bool:
+def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_column:str, type_column:None|str = None, auto_data:bool = False, subject:None|str = None) -> bool:
     """
     Добавляет столбец к одному предмету или ко всем.
     
@@ -324,6 +347,8 @@ def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_col
     :type title_column: str
     :param type_column: "mark" -- создает столбец для оценки перед "Средняя оценка" | None -- создает столбец в конце таблицы
     :type type_column: str
+    :param auto_data: True -- заполнить столбец случайными данными | False -- заполнить столбец с помощью np.nan
+    :type auto_data: bool
     :param subject: None при target = "all" | Название предмета при target = "one"
     :type subject: None|str
     :return: True, если был(и) создан(ы) столбцы | False, если столбец с таким названием уже существует(в конкретной таблице | во всех таблицах)
@@ -332,7 +357,7 @@ def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_col
     place = "before" if type_column == "mark" else "end"
     if target == "one":
         if title_column not in subjects[subject].columns:
-            func.add_column(subjects[subject], title_column, place=place)
+            func.add_column(subjects[subject], title_column, auto_data=auto_data, place=place)
         else:
             st.sidebar.warning("Столбец с таким названием уже существует", icon = "❌")
             return False
@@ -341,7 +366,7 @@ def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_col
         cnt_is = 0
         for df_subject in subjects.values():
             if title_column not in df_subject.columns:
-                func.add_column(df_subject, title_column, place=place)
+                func.add_column(df_subject, title_column, auto_data=auto_data, place=place)
             else:
                 cnt_is += 1
                 if cnt_is == cnt_subjects:
@@ -369,6 +394,40 @@ name_table = st.sidebar.selectbox(" ", (["Все предметы", "Данны�
 
 if name_table in list_subjects:
     show_subject_table(subjects, name_table)
+    for i in range(3): st.write(" ")
+    # График посещаемости предмета
+    st.write("Посещаемость")
+    fig, ax = plt.subplots(figsize=(8, 2.5))
+    attendance = column_nums_division(subjects[name_table]["Посещаемость"])
+    ax.pie(attendance.values(), labels=sorted(attendance.keys(), reverse=True), autopct='%1.1f%%', explode=[0.1, 0.1, 0, 0, 0.1])
+    ax.set_title(f"Посещаемость по предмету: {name_table}")
+    ax.grid(axis='y', linestyle='-.', alpha=0.7)
+    fig.tight_layout()
+    st.pyplot(fig, width=1000)
+    buf_graph_subject_attendance = io.BytesIO()
+    fig.savefig(buf_graph_subject_attendance, format="png", bbox_inches="tight")
+    buf_graph_subject_attendance.seek(0)
+    st.download_button("Скачать график", buf_graph_subject_attendance, f"{name_table} - Посещаемость.png")
+    plt.close(fig)
+    for i in range(3): st.write(" ")
+    # Графики активностей предмета
+    if subjects[name_table].columns[-1] != "Посещаемость":
+        id_attendance = subjects[name_table].columns.get_loc("Посещаемость")
+        activities = subjects[name_table].columns[id_attendance + 1:]
+        st.write("Активности")
+        name_graph_subject_activity = st.radio(" ", activities, horizontal=True)
+        fig, ax = plt.subplots(figsize=(8, 2.5))
+        activity = column_nums_division(subjects[name_table][name_graph_subject_activity])
+        ax.pie(activity.values(), labels=sorted(activity.keys(), reverse=True), autopct='%1.1f%%', explode=[0.1, 0.1, 0, 0, 0.1])
+        ax.set_title(f"{name_graph_subject_activity} по предмету: {name_table}")
+        ax.grid(axis='y', linestyle='-.', alpha=0.7)
+        fig.tight_layout()
+        st.pyplot(fig, width=1000)
+        buf_graph_subject_activity = io.BytesIO()
+        fig.savefig(buf_graph_subject_activity, format="png", bbox_inches="tight")
+        buf_graph_subject_activity.seek(0)
+        st.download_button("Скачать график", buf_graph_subject_activity, f"{name_table} - {name_graph_subject_activity}.png")
+        plt.close(fig)
 else:
     st.session_state.editing_subject = False
     st.session_state.filtering_subject = False
@@ -377,7 +436,7 @@ if name_table == "Все предметы":
     st.write(name_table)
     df_all_subjects = func.info_subjects(subjects)
     st.dataframe(df_all_subjects)
-    st.download_button("Скачать", df_all_subjects.to_csv().encode("utf-8"), f"{name_table}.csv")
+    st.download_button("Скачать таблицу", df_all_subjects.to_csv().encode("utf-8"), f"{name_table}.csv")
 
 if name_table == "Данные студента":
     st.write("Все предметы")
@@ -396,7 +455,7 @@ if name_table == "Данные по группам":
     st.write(name_table)
     df_groups = func.info_groups(subjects, list_groups)
     st.dataframe(df_groups)
-    st.download_button("Скачать", df_groups.to_csv().encode("utf-8"), f"{name_table}.csv")
+    st.download_button("Скачать таблицу", df_groups.to_csv().encode("utf-8"), f"{name_table}.csv")
     for i in range(3): st.write(" ")
     # Графики средних баллов по предмету по группам
     st.write("Средний балл по предмету по группам")
@@ -492,9 +551,11 @@ if action == "Добавить столбец":
         subject = None
     title_column = st.sidebar.text_input("Название", max_chars = 20)
     type_column = st.sidebar.selectbox("Тип столбца", ("Для оценки", "Другое"))
+    auto_data = st.sidebar.checkbox("Заполнить данными")
     type_column = "mark" if type_column == "Для оценки" else None
     title_column = check_text_input("checked_title_column", title_column, "title_column", type_column=type_column)
-    if st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"] and add_column_by_target(subjects, target, title_column, type_column=type_column, subject=subject):
+    if (st.sidebar.button("Добавить столбец") and st.session_state["checked_title_column"] \
+    and add_column_by_target(subjects, target, title_column, type_column=type_column, auto_data=auto_data, subject=subject)):
         save_subjects(subjects)
         write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
         st.success(f"Столбец {title_column} успешно создан!", icon="✅")

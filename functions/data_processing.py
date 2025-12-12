@@ -89,7 +89,7 @@ def filter_df_column(df_subject:pd.DataFrame, name_column:str, x:int|list[int], 
             x = [x]
         return df_subject[df_subject[name_column].isin(x)], len(df_subject[df_subject[name_column].isin(x)])
 
-def add_column(df:pd.DataFrame, title:str, place:str = "before", name_column_before:str = "Средняя оценка") -> pd.DataFrame:
+def add_column(df:pd.DataFrame, title:str, auto_data:bool = False, place:str = "before", name_column_before:str = "Средняя оценка") -> pd.DataFrame:
     """
     Добавляет столбец к pd.DataFrame перед столбцом name_column_before или в конце таблице.
     
@@ -97,6 +97,8 @@ def add_column(df:pd.DataFrame, title:str, place:str = "before", name_column_bef
     :type df: pd.DataFrame
     :param title: Название нового столбца
     :type title: str
+    :param auto_data: True -- заполняет столбец случайными числами от 0 до 100 | False -- заполняет столбец значением np.nan
+    :type auto_data: bool
     :param place: "before" -- добавить столбец перед столбцом name_column_before | "end" -- добавить столбец в конец таблицы
     :type place: str
     :param name_column_before: Название столбца, перед которым нужно добавить столбец при place = "before"
@@ -105,6 +107,8 @@ def add_column(df:pd.DataFrame, title:str, place:str = "before", name_column_bef
     :rtype: DataFrame
     """
     data = np.nan
+    if auto_data:
+        data = list(np.random.randint(0, 101, df.shape[0]))
     if place == "before":
         id_column = df.columns.get_loc(name_column_before)
         df.insert(loc=id_column, column=title, value=data)
