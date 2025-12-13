@@ -527,17 +527,30 @@ if action == "Добавить студента":
 if action == "Удалить студента":
     st.sidebar.subheader("Удалить студента")
     id_student = st.sidebar.number_input("ID студента", value = 1000, min_value=1000)
-    if st.sidebar.button("Удалить студента"):
-        try:
+    is_id = False
+    if id_student in subjects[list_subjects[0]].index:
+        is_id = True
+    else:
+        st.sidebar.warning("Студента с таким ID не существует", icon = "❌")
+    if "clicking_delete_student" not in st.session_state:
+        st.session_state.clicking_delete_student = False
+    if (st.sidebar.button("Удалить студента") or st.session_state.clicking_delete_student) and is_id:
+        st.session_state.clicking_delete_student = True
+        st.sidebar.write(f"Вы точно хотите безвозратно удалить студента с ID {id_student}?")
+        if st.sidebar.button("Да, я хочу удалить"):
+            st.session_state.clicking_delete_student = False
             name, group = func.remove_student(subjects, id_student)
             save_subjects(subjects)
             write_students(id_student, name, group, action = "remove")
-            write_log(action, f"ID студента = {id_student}")
-            st.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
+            write_log(action, f"ID студента = {id_student}") # log
+            st.sidebar.success(f"Студент с ID {id_student} успешно удален!", icon="✅")
             time.sleep(1)
             st.rerun()
-        except KeyError:
-            st.warning("Студента с таким ID не существует", icon = "❌")
+        if st.sidebar.button("Нет, я ошибся"):
+            st.session_state.clicking_delete_student = False
+            st.rerun()
+else:
+    st.session_state.clicking_delete_student = False
 
 if action == "Добавить столбец":
     st.sidebar.subheader("Добавить столбец")
@@ -558,7 +571,7 @@ if action == "Добавить столбец":
     and add_column_by_target(subjects, target, title_column, type_column=type_column, auto_data=auto_data, subject=subject)):
         save_subjects(subjects)
         write_log(action, f"Название = {title_column}, Тип столбца = {type_column}") # log
-        st.success(f"Столбец {title_column} успешно создан!", icon="✅")
+        st.sidebar.success(f"Столбец {title_column} успешно создан!", icon="✅")
         time.sleep(1)
         st.rerun()
 
@@ -590,7 +603,7 @@ if other == "Добавить предмет":
         save_subjects(subjects)
         st.session_state.subjects = subjects
         write_log("Добавить новый предмет", f"Предмет = {name_subject}") # log
-        st.success(f"Таблица для предмета {name_subject} успешно создан!", icon="✅")
+        st.sidebar.success(f"Таблица для предмета {name_subject} успешно создан!", icon="✅")
         time.sleep(1)
         st.rerun()
 
