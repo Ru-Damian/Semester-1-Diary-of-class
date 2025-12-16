@@ -116,6 +116,20 @@ def add_column(df:pd.DataFrame, title:str, auto_data:bool = False, place:str = "
         df[title] = data
     return df
 
+def remove_column(df:pd.DataFrame, title_column:str) -> pd.DataFrame:
+    """
+    Удаляет столбец с названием title_column из pd.DataFrame.
+    
+    :param df: pd.DataFrame, из которого нужно удалить столбец
+    :type df: pd.DataFrame
+    :param title_column: Название столбца, который нужно удалить
+    :type title_column: str
+    :return: Изменный df
+    :rtype: DataFrame
+    """
+    df = df.drop(title_column, axis=1)
+    return df
+
 def replace_value(df:pd.DataFrame, name_column:str, id:int, value:int) -> None:
     """
     Поменять в df значение в ячейке df.loc[id, name_column] на value

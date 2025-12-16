@@ -503,9 +503,9 @@ if name_table == "Данные по группам":
 
 
 # Действия
-actions = ["Добавить столбец", "Удалить столбец", "Добавить студента", "Удалить студента"]
+actions = ["Добавить столбец", "Добавить студента", "Удалить студента"]
 if name_table in list_subjects:
-    actions = ["Отфильтровать"] + actions
+    actions = ["Отфильтровать", "Добавить столбец", "Удалить столбец"] + actions[1:]
 
 st.sidebar.title("Действия")
 action = st.sidebar.selectbox(" ", (["Не выбрано"] + actions))
@@ -574,6 +574,28 @@ if action == "Добавить столбец":
         st.sidebar.success(f"Столбец {title_column} успешно создан!", icon="✅")
         time.sleep(1)
         st.rerun()
+
+if action == "Удалить столбец":
+    current_columns = [col for col in subjects[name_table].columns[2:] if col not in ["ID", "Студент", "Группа", "Средняя оценка", "Посещаемость"]]
+    title_column = st.sidebar.selectbox("Название столбца", current_columns)
+    if "clicking_delete_column" not in st.session_state:
+        st.session_state.clicking_delete_column = False
+    if st.sidebar.button("Удалить столбец") or st.session_state.clicking_delete_column:
+        st.session_state.clicking_delete_column = True
+        st.sidebar.write(f"Вы точно хотите безвозратно удалить столбец {title_column}?")
+        if st.sidebar.button("Да, я хочу удалить"):
+            st.session_state.clicking_delete_column = False
+            subjects[name_table] = func.remove_column(subjects[name_table], title_column)
+            save_subjects(subjects)
+            write_log(action, f"Название столбца = {title_column}") # log
+            st.sidebar.success(f"Столбец {title_column} успешно удален!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+        if st.sidebar.button("Нет, я ошибся"):
+            st.session_state.clicking_delete_column = False
+            st.rerun()
+else:
+    st.session_state.clicking_delete_column = False
 
 if action == "Отфильтровать":
     st.sidebar.subheader("Параметры фильтра")
