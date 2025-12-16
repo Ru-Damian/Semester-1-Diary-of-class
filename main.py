@@ -56,8 +56,8 @@ def write_changes_students(id, df_student):
 
 def load_subjects() -> tuple[dict[str, pd.DataFrame], list[str], list[int], bool]:
     """
-    Выгружает список предметов из subjects.txt. Создает словарь {название предмета:pd.Dataframe}.
-    pd.Dataframe создается из файла .csv, если такого нет используется func.create_df_subject(), а данные для нее берутся из "students.txt".
+    Выгружает список предметов из subjects.txt. Создает словарь {название предмета:pd.DataFrame}.
+    pd.DataFrame создается из файла .csv, если такого нет используется func.create_df_subject(), а данные для нее берутся из "students.txt".
     
     :return: Словарь {название предмета:таблица предмета}, массив с названием всех предметов, массив с номерами всех групп, флаг, который указывает создавались ли новые таблицы
     :rtype: tuple[dict[str, pd.DataFrame], list[str], list[int], bool]
@@ -104,9 +104,9 @@ def save_info_student(id:int, df_student:pd.DataFrame, df_marks:pd.DataFrame) ->
     
     :param id: ID студента, чьи оценки были изменены
     :type id: int
-    :param df_student: pd.Dataframe с ФИО студента и номером группы
+    :param df_student: pd.DataFrame с ФИО студента и номером группы
     :type df_student: pd.DataFrame
-    :param df_marks: pd.Dataframe с оценками студента по всем предметам
+    :param df_marks: pd.DataFrame с оценками студента по всем предметам
     :type df_marks: pd.DataFrame
     """
     for subject, df_subject in subjects.items():
@@ -165,7 +165,7 @@ def edit_button(flag_key:str) -> None:
 
 def show_filtered_subject_table() -> None:
     """
-    Отображает отфильтрованный pd.dataframe и создает кнопку, чтобы вернуть исходный pd.dataframe.
+    Отображает отфильтрованный pd.DataFrame и создает кнопку, чтобы вернуть исходный pd.DataFrame.
     """
     filtered_df_subject = st.session_state.filtered_df_subject
     filtered_cnt_row = st.session_state.filtered_cnt_row
@@ -180,12 +180,12 @@ def show_filtered_subject_table() -> None:
         st.session_state.filtering_subject = False
         st.rerun()
 
-def show_edited_subject_table(subjects:dict[str, pd.Dataframe], subject:str) -> None:
+def show_edited_subject_table(subjects:dict[str, pd.DataFrame], subject:str) -> None:
     """
-    Отображает редактируемый pd.dataframe через st.data_editor и создает кнопку, чтобы сохранить измения в pd.dataframe.
+    Отображает редактируемый pd.DataFrame через st.data_editor и создает кнопку, чтобы сохранить измения в pd.DataFrame.
     
     :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
-    :type subjects: dict[str, pd.Dataframe]
+    :type subjects: dict[str, pd.DataFrame]
     :param subject: Название предмета, таблицу которого нужно отредактировать
     :type subject: str
     """
@@ -202,15 +202,15 @@ def show_edited_subject_table(subjects:dict[str, pd.Dataframe], subject:str) -> 
         time.sleep(1)
         st.rerun()
 
-def show_subject_table(subjects:dict[str, pd.Dataframe], subject:str) -> None:
+def show_subject_table(subjects:dict[str, pd.DataFrame], subject:str) -> None:
     """
     Создает флаги состояний. 
     st.session_state.filtering_subject == True -> вызывает show_filtered_subject_table()
     st.session_state.editing_subject == True -> вызывает show_edited_subject_table()
-    Если оба флага не активны, то отбражается pd.Dataframe с кнопками "Редактировать" и "Скачать"
+    Если оба флага не активны, то отбражается pd.DataFrame с кнопками "Редактировать" и "Скачать"
     
     :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
-    :type subjects: dict[str, pd.Dataframe]
+    :type subjects: dict[str, pd.DataFrame]
     :param subject: Название предмета, таблицу которого нужно показать
     :type subject: str
     """""
@@ -228,12 +228,12 @@ def show_subject_table(subjects:dict[str, pd.Dataframe], subject:str) -> None:
         edit_button("editing_subject")
         st.download_button("Скачать таблицу", subjects[subject].to_csv().encode("utf-8"), f"{subject}.csv")
 
-def show_edited_info_student_table(subjects:dict[str, pd.Dataframe], id_student:int) -> None:
+def show_edited_info_student_table(subjects:dict[str, pd.DataFrame], id_student:int) -> None:
     """
-    Отображает редактируемый pd.dataframe через st.data_editor и создает кнопку, чтобы сохранить измения в pd.dataframe.
+    Отображает редактируемый pd.DataFrame через st.data_editor и создает кнопку, чтобы сохранить измения в pd.DataFrame.
     
     :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
-    :type subjects: dict[str, pd.Dataframe]
+    :type subjects: dict[str, pd.DataFrame]
     :param id_student: ID студента, таблицы которого нужно отредактировать
     :type id_student: int
     """
@@ -259,14 +259,14 @@ def show_edited_info_student_table(subjects:dict[str, pd.Dataframe], id_student:
         time.sleep(1)
         st.rerun()
 
-def show_info_student_table(subjects:dict[str, pd.Dataframe], id_student:int) -> None:
+def show_info_student_table(subjects:dict[str, pd.DataFrame], id_student:int) -> None:
     """
     Создает флаг редактирования. 
     st.session_state.editing_student == True -> вызывает show_edited_info_student_table()
-    Если флаг не активен, то отбражается pd.Dataframe с кнопкой "Редактировать"
+    Если флаг не активен, то отбражается pd.DataFrame с кнопкой "Редактировать"
     
     :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
-    :type subjects: dict[str, pd.Dataframe]
+    :type subjects: dict[str, pd.DataFrame]
     :param id_student: ID студента, таблицы которого нужно показать
     :type id_student: int
     """
@@ -335,12 +335,12 @@ def check_text_input(flag_key:str, text_input:str, type_text_input:str, type_col
         st.sidebar.warning(func.check_text_input(text_input, type_text_input, type_column, list_subject)[6:], icon = "❌")
         st.session_state[flag_key] = False
 
-def add_column_by_target(subjects:dict[str, pd.Dataframe], target:str, title_column:str, type_column:None|str = None, auto_data:bool = False, subject:None|str = None) -> bool:
+def add_column_by_target(subjects:dict[str, pd.DataFrame], target:str, title_column:str, type_column:None|str = None, auto_data:bool = False, subject:None|str = None) -> bool:
     """
     Добавляет столбец к одному предмету или ко всем.
     
     :param subjects: Словарь {название предмета:таблица предмета} со всеми таблицами предметов
-    :type subjects: dict[str, pd.Dataframe]
+    :type subjects: dict[str, pd.DataFrame]
     :param target: "one" -- добавляет столбец к одному предмету | "all" -- добавляет столбец ко всем предметам 
     :type target: str
     :param title_column: Название нового столбца
