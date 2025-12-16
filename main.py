@@ -134,18 +134,18 @@ def make_non_editable_column_config(df:pd.DataFrame, non_editable_columns:list[s
     """
     config = dict()
     if block_index:
-        if df.index.dtype in ['int64', 'float64']:
+        if df.index.dtype in ['int64', 'float64', 'int32']:
             config[index] = st.column_config.NumberColumn(index, disabled=True)
         else:
             config[index] = st.column_config.TextColumn(index, disabled=True)
     for col in df.columns:
         if col in non_editable_columns:
-            if df[col].dtype in ['int64', 'float64']:
+            if df[col].dtype in ['int64', 'float64', 'int32']:
                 config[col] = st.column_config.NumberColumn(col, disabled=True)
             else:
                 config[col] = st.column_config.TextColumn(col, disabled=True)
         else:
-            if df[col].dtype in ['int64', 'float64']:
+            if df[col].dtype in ['int64', 'float64', 'int32']:
                 config[col] = st.column_config.NumberColumn(col, min_value=0, max_value=100)
             else:
                 config[col] = st.column_config.TextColumn(col, max_chars=50)
@@ -503,7 +503,7 @@ if name_table == "Данные по группам":
 
 
 # Действия
-actions = ["Добавить столбец", "Добавить студента", "Удалить студента"]
+actions = ["Добавить столбец", "Удалить столбец", "Добавить студента", "Удалить студента"]
 if name_table in list_subjects:
     actions = ["Отфильтровать"] + actions
 

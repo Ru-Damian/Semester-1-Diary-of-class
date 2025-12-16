@@ -40,7 +40,7 @@ def check_full_name_input(full_name:str) -> str:
     word_pattern = r"[а-яё]+(\-[а-яё]+)*"
     for word in words:
         if not re.fullmatch(rf"^{word_pattern}$", word, re.IGNORECASE):
-            if set(word)[0] == "-":
+            if list(set(word))[0] == "-":
                 return f"Error:\"-\" не может использоваться отдельно от слова"
             elif re.search(r'--', word):
                 return f"Error:\"{word}\" не может быть несколько подряд идущих \"-\""
